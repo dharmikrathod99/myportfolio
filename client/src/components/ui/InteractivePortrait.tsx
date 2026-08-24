@@ -13,8 +13,8 @@ interface InteractivePortraitProps {
 export function InteractivePortrait({
   baseImageUrl,
   revealImageUrl,
-  blobRadius = 0.35,
-  blobFadeSpeed = 2.5,
+  blobRadius = 0.45,
+  blobFadeSpeed = 1.2,
   className = '',
 }: InteractivePortraitProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -155,24 +155,25 @@ export function InteractivePortrait({
               uniform sampler2D prevFrame;
               varying vec2 vUv;
 
-              float hash(vec2 p) {
-                return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
+              float hash(vec2 p) { 
+                return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); 
               }
 
               float noise(vec2 p) {
-                vec2 i = floor(p);
-                vec2 f = fract(p);
+                vec2 i = floor(p); 
+                vec2 f = fract(p); 
                 f = f * f * (3.0 - 2.0 * f);
-                float a = hash(i);
-                float b = hash(i + vec2(1.0, 0.0));
-                float c = hash(i + vec2(0.0, 1.0));
+                float a = hash(i); 
+                float b = hash(i + vec2(1.0, 0.0)); 
+                float c = hash(i + vec2(0.0, 1.0)); 
                 float d = hash(i + vec2(1.0, 1.0));
                 return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
               }
 
               void main() {
                 float rVal = texture2D(prevFrame, vUv).r;
-                rVal -= clamp(dTime / pointerDuration, 0.0, 0.05);
+                // Decay back to original image over pointerDuration (~1.2 seconds)
+                rVal -= dTime / pointerDuration;
                 rVal = clamp(rVal, 0.0, 1.0);
 
                 float f = 0.0;
@@ -185,14 +186,14 @@ export function InteractivePortrait({
 
                   float noiseVal = noise(vec2(angle * 3.0 + time * 0.5, dist * 5.0));
                   float noiseVal2 = noise(vec2(angle * 5.0 - time * 0.3, dist * 3.0 + time));
-                  float radiusVariation = 0.7 + noiseVal * 0.5 + noiseVal2 * 0.3;
+                  float radiusVariation = 0.75 + noiseVal * 0.45 + noiseVal2 * 0.25;
                   float organicRadius = pointerRadius * radiusVariation;
 
-                  f = 1.0 - smoothstep(organicRadius * 0.05, organicRadius * 1.2, dist);
-                  f *= 0.8 + noiseVal * 0.2;
+                  f = 1.0 - smoothstep(organicRadius * 0.05, organicRadius * 1.15, dist);
+                  f *= 0.85 + noiseVal * 0.15;
                 }
 
-                rVal += f * 0.25;
+                rVal += f * 0.3;
                 rVal = clamp(rVal, 0.0, 1.0);
 
                 gl_FragColor = vec4(vec3(rVal), 1.0);
@@ -222,20 +223,24 @@ export function InteractivePortrait({
       let baseImage: any;
       let revealImage: any;
 
-      // Update geometries helper to keep base and reveal images perfectly matched 1:1
+      // Update geometries helper — ensures zero cropping of hair at the top
       const updateImageGeometries = (img: any) => {
         if (!img || !baseImage || !revealImage) return;
-        const scale = Math.max(width / img.width, height / img.height);
+        // Fit 100% inside container so hair is NEVER cropped
+        const scale = Math.min(width / img.width, height / img.height);
         const planeWidth = img.width * scale;
         const planeHeight = img.height * scale;
 
+        // Position bottom-aligned inside container
+        const posY = -(height - planeHeight) / 2;
+
         baseImage.geometry.dispose();
         baseImage.geometry = new THREE.PlaneGeometry(planeWidth, planeHeight);
-        baseImage.position.set(0, 0, 0);
+        baseImage.position.set(0, posY, 0);
 
         revealImage.geometry.dispose();
         revealImage.geometry = new THREE.PlaneGeometry(planeWidth, planeHeight);
-        revealImage.position.set(0, 0, 0.1);
+        revealImage.position.set(0, posY, 0.1);
       };
 
       // Load base image (default visible)
@@ -276,7 +281,7 @@ export function InteractivePortrait({
             float blobVal = texture2D(texBlob, blobUV).r;
 
             // Fade out base image where blob is active
-            texColor.a *= (1.0 - smoothstep(0.01, 0.2, blobVal));
+            texColor.a *= (1.0 - smoothstep(0.01, 0.25, blobVal));
             gl_FragColor = texColor;
           }
         `,
@@ -313,7 +318,7 @@ export function InteractivePortrait({
             if (blobVal < 0.01) discard;
 
             vec4 texColor = texture2D(map, vUv);
-            texColor.a *= smoothstep(0.01, 0.2, blobVal);
+            texColor.a *= smoothstep(0.01, 0.25, blobVal);
             gl_FragColor = texColor;
           }
         `,
@@ -401,7 +406,7 @@ export function InteractivePortrait({
       className={className}
       style={{
         cursor: 'default',
-        overflow: 'hidden',
+        overflow: 'visible',
         touchAction: 'none',
         position: 'relative',
       }}

@@ -138,12 +138,12 @@ export default function HeroSection() {
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] sm:w-[540px] lg:w-[680px] h-[400px] sm:h-[540px] lg:h-[680px] rounded-full bg-gradient-to-tr from-[#3A86FF]/35 via-[#FF299B]/25 to-[#764105]/20 blur-3xl opacity-90 animate-pulse-glow pointer-events-none" />
 
               {/* Interactive Portrait: Hover reveals myfacecover.png with organic blob */}
-              <div className="relative w-full h-[calc(100vh-14rem)] sm:h-[calc(100vh-12rem)] lg:h-[calc(100vh-11rem)] max-h-[650px] overflow-hidden rounded-2xl">
+              <div className="relative w-full h-[calc(100vh-14rem)] sm:h-[calc(100vh-12rem)] lg:h-[calc(100vh-11rem)] max-h-[650px] overflow-visible">
                 <InteractivePortrait
                   baseImageUrl="/myfaceopen.png"
                   revealImageUrl="/myfacecover.png"
-                  blobRadius={0.35}
-                  blobFadeSpeed={2.5}
+                  blobRadius={0.42}
+                  blobFadeSpeed={1.2}
                   className="w-full h-full"
                 />
               </div>
