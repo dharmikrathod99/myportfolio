@@ -13,7 +13,7 @@ export default function ReadingProgress() {
 
   return (
     <motion.div
-      className="fixed top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-primary via-accent to-emerald-400 z-[100] origin-left pointer-events-none"
+      className="fixed top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-primary via-accent to-[#38BDF8] z-[100] origin-left pointer-events-none"
       style={{ scaleX }}
     />
   );

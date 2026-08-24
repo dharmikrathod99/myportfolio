@@ -36,7 +36,7 @@ export default function ProcessPage() {
               <Cpu className="w-3.5 h-3.5" /> DEDICATED PROCESS PAGE // /process
             </span>
             <h1 className="font-display font-extrabold text-4xl sm:text-6xl text-white tracking-tight">
-              Engineering <span className="bg-gradient-to-r from-accent via-emerald-400 to-white bg-clip-text text-transparent">Process & Workflow</span>
+              Engineering <span className="bg-gradient-to-r from-accent via-[#38BDF8] to-white bg-clip-text text-transparent">Process & Workflow</span>
             </h1>
             <p className="text-base sm:text-xl text-customText-secondary">
               5-stage development methodology ensuring zero technical debt, security, and sub-second page performance.

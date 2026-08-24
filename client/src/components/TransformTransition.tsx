@@ -76,7 +76,7 @@ export default function TransformTransition() {
         const alpha = Math.max(0, (1 - star.z / w) * 0.9);
 
         ctx.beginPath();
-        ctx.strokeStyle = `rgba(0, 251, 27, ${alpha})`;
+        ctx.strokeStyle = `rgba(0, 136, 204, ${alpha})`;
         ctx.lineWidth = size;
         ctx.moveTo(px, py);
         ctx.lineTo(sx, sy);
@@ -93,7 +93,7 @@ export default function TransformTransition() {
       const glowRadius = Math.max(1, Math.min(Math.max(0, elapsed) * 80, 200));
       if (glowRadius > 0) {
         const glowGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, glowRadius);
-        glowGrad.addColorStop(0, `rgba(0, 251, 27, ${Math.min(Math.max(0, elapsed) * 0.1, 0.15)})`);
+        glowGrad.addColorStop(0, `rgba(0, 136, 204, ${Math.min(Math.max(0, elapsed) * 0.1, 0.15)})`);
         glowGrad.addColorStop(1, 'transparent');
         ctx.fillStyle = glowGrad;
         ctx.fillRect(0, 0, w, h);
@@ -193,8 +193,8 @@ export default function TransformTransition() {
                 className="h-full rounded-full"
                 style={{
                   width: `${Math.min(progress, 100)}%`,
-                  background: 'linear-gradient(90deg, #042F0C, #00FB1B, #A3E635, #00FB1B)',
-                  boxShadow: '0 0 15px rgba(0, 251, 27, 0.6), 0 0 30px rgba(0, 251, 27, 0.3)',
+                  background: 'linear-gradient(90deg, #1E40AF, #3A86FF, #60A5FA, #3A86FF)',
+                  boxShadow: '0 0 15px rgba(58, 134, 255, 0.6), 0 0 30px rgba(58, 134, 255, 0.3)',
                 }}
                 transition={{ duration: 0.05 }}
               />
@@ -216,7 +216,7 @@ export default function TransformTransition() {
               {[0, 1, 2, 3].map((i) => (
                 <motion.div
                   key={i}
-                  className="absolute w-2 h-2 rounded-full bg-accent shadow-[0_0_8px_#00FB1B]"
+                  className="absolute w-2 h-2 rounded-full bg-accent shadow-[0_0_8px_#3A86FF]"
                   animate={{
                     rotate: 360,
                   }}

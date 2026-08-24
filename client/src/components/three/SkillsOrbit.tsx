@@ -6,17 +6,17 @@ import { useFrame } from '@react-three/fiber';
 import { Float, Billboard, Text } from '@react-three/drei';
 
 const SKILLS = [
-  { name: 'React', color: '#61DAFB' },
-  { name: 'Node.js', color: '#68A063' },
+  { name: 'React', color: '#38BDF8' },
+  { name: 'Node.js', color: '#0EA5E9' },
   { name: 'TypeScript', color: '#3178C6' },
-  { name: 'MongoDB', color: '#47A248' },
+  { name: 'MongoDB', color: '#0284C7' },
   { name: 'Next.js', color: '#FFFFFF' },
-  { name: 'Three.js', color: '#00FB1B' },
-  { name: 'Express', color: '#CCFF00' },
-  { name: 'Python', color: '#FFD43B' },
+  { name: 'Three.js', color: '#1818E7' },
+  { name: 'Express', color: '#94A3B8' },
+  { name: 'Python', color: '#38BDF8' },
   { name: 'Docker', color: '#2496ED' },
-  { name: 'AWS', color: '#FF9900' },
-  { name: 'GraphQL', color: '#E535AB' },
+  { name: 'AWS', color: '#0EA5E9' },
+  { name: 'GraphQL', color: '#FF299B' },
   { name: 'Tailwind', color: '#38BDF8' },
 ];
 
@@ -89,8 +89,8 @@ export default function SkillsOrbit() {
       <mesh scale={0.8}>
         <octahedronGeometry args={[1, 0]} />
         <meshStandardMaterial
-          color="#00FB1B"
-          emissive="#00FB1B"
+          color="#3A86FF"
+          emissive="#3A86FF"
           emissiveIntensity={0.6}
           metalness={0.9}
           roughness={0.1}
@@ -101,7 +101,7 @@ export default function SkillsOrbit() {
       {/* Orbit ring visual */}
       <mesh rotation={[Math.PI / 2, 0, 0]}>
         <torusGeometry args={[6, 0.015, 8, 100]} />
-        <meshBasicMaterial color="#00FB1B" transparent opacity={0.2} />
+        <meshBasicMaterial color="#3A86FF" transparent opacity={0.3} />
       </mesh>
 
       {/* Skill Orbs */}
@@ -119,11 +119,11 @@ export default function SkillsOrbit() {
       <Billboard position={[0, 4, 0]}>
         <Text
           fontSize={0.6}
-          color="#00FB1B"
+          color="#3A86FF"
           anchorX="center"
           anchorY="middle"
           outlineWidth={0.03}
-          outlineColor="#000000"
+          outlineColor="#FFFFFF"
           letterSpacing={0.15}
         >
           SKILLS & TECHNOLOGIES

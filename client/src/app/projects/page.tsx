@@ -36,7 +36,7 @@ export default function ProjectsPage() {
               <FolderGit2 className="w-3.5 h-3.5" /> DEDICATED PROJECTS PAGE // /projects
             </span>
             <h1 className="font-display font-extrabold text-4xl sm:text-6xl text-white tracking-tight">
-              Featured <span className="bg-gradient-to-r from-accent via-emerald-400 to-white bg-clip-text text-transparent">Projects & Portfolio</span>
+              Featured <span className="bg-gradient-to-r from-accent via-[#38BDF8] to-white bg-clip-text text-transparent">Projects & Portfolio</span>
             </h1>
             <p className="text-base sm:text-xl text-customText-secondary">
               Production-grade web applications, SaaS tools, client platforms, and high-performance solutions.

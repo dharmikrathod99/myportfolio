@@ -11,36 +11,40 @@ const config: Config = {
     extend: {
       colors: {
         primary: {
-          DEFAULT: '#0A0A0A',
-          light: '#171717',
-          dark: '#030303',
+          DEFAULT: '#0A0A0A', // Luxury Deep Black
+          light: '#1F2937',
+          dark: '#000000',
         },
         secondary: {
-          DEFAULT: '#FFFFFF',
-          hover: '#F3F4F6',
-          dark: '#E5E7EB',
+          DEFAULT: '#FFFFFF', // Crisp Pure White
+          hover: '#F9FAFB',
+          dark: '#F3F4F6',
         },
         accent: {
-          DEFAULT: '#00FB1B',
-          hover: '#26FF3E',
-          glow: 'rgba(0, 251, 27, 0.4)',
+          DEFAULT: '#3A86FF',       // User Brand Sky Blue (#3A86FF)
+          hover: '#2563EB',         // Deep Electric Blue Hover
+          light: '#EBF3FF',         // Soft Sky Blue Tint
+          dark: '#1D4ED8',          // Deep Sky Blue Dark
+          glow: 'rgba(58, 134, 255, 0.45)',
+          muted: 'rgba(58, 134, 255, 0.12)',
         },
         dark: {
-          bg: '#050505',
-          surface: '#0D0D0D',
-          card: '#141414',
-          border: '#262626',
+          bg: '#05050A',
+          surface: '#0B0F19',
+          card: '#111827',
+          border: '#1F2937',
+          muted: '#6B7280',
         },
         customText: {
-          primary: '#FFFFFF',
-          secondary: '#A3A3A3',
-          muted: '#737373',
+          primary: '#0A0A0A',       // Luxury Crisp Black
+          secondary: '#374151',     // Slate Medium Dark Text
+          muted: '#6B7280',         // Refined Muted Text
         },
         aurora: {
-          cyan: '#00F0FF',
-          blue: '#3B82F6',
-          purple: '#8B5CF6',
-          green: '#00FB1B',
+          cyan: '#60A5FA',
+          blue: '#3A86FF',
+          purple: '#6366F1',
+          sky: '#3A86FF',
         }
       },
       fontFamily: {
@@ -87,13 +91,14 @@ const config: Config = {
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
         'gradient-conic': 'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
-        'aurora-glow': 'radial-gradient(ellipse at top left, rgba(0, 251, 27, 0.2) 0%, rgba(0, 251, 27, 0.05) 45%, transparent 70%)',
-        'glass-gradient': 'linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.01) 100%)',
+        'aurora-glow': 'radial-gradient(ellipse at top left, rgba(58, 134, 255, 0.2) 0%, rgba(58, 134, 255, 0.05) 45%, transparent 70%)',
+        'glass-gradient': 'linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.4) 100%)',
       },
       boxShadow: {
-        'accent-glow': '0 0 25px rgba(0, 251, 27, 0.35)',
-        'primary-glow': '0 0 30px rgba(0, 251, 27, 0.15)',
-        'glass': '0 8px 32px 0 rgba(0, 0, 0, 0.6)',
+        'accent-glow': '0 0 25px rgba(58, 134, 255, 0.45)',
+        'primary-glow': '0 0 30px rgba(58, 134, 255, 0.2)',
+        'glass': '0 8px 32px 0 rgba(0, 0, 0, 0.05)',
+        'premium-card': '0 10px 30px -10px rgba(0, 0, 0, 0.05), 0 20px 25px -5px rgba(0, 0, 0, 0.03)',
       }
     },
   },

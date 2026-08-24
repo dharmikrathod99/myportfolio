@@ -15,8 +15,8 @@ export interface LiquidMetalProps {
 }
 
 export const LiquidMetal = memo(function LiquidMetal({
-  colorBack = '#042F0C',
-  colorTint = '#00FB1B',
+  colorBack = '#001F33',
+  colorTint = '#3A86FF',
   speed = 0.7,
   repetition = 4,
   distortion = 0.3,
@@ -112,12 +112,12 @@ export const LiquidMetal = memo(function LiquidMetal({
         Math.max(w, h) * scale
       );
 
-      // Liquid chrome green palette matching screenshot
+      // Liquid chrome brand blue palette
       fluidGrad.addColorStop(0, '#FFFFFF'); // Specular light highlight
-      fluidGrad.addColorStop(0.2, '#A3E635'); // Vibrant lime reflection
-      fluidGrad.addColorStop(0.45, colorTint); // Bright neon emerald
-      fluidGrad.addColorStop(0.7, '#15803D'); // Deep forest metallic
-      fluidGrad.addColorStop(0.88, '#CCFF00'); // Shimmering gold-lime band
+      fluidGrad.addColorStop(0.2, '#7DD3FC'); // Vibrant sky light reflection
+      fluidGrad.addColorStop(0.45, colorTint); // Bright electric brand blue
+      fluidGrad.addColorStop(0.7, '#0369A1'); // Deep metallic blue
+      fluidGrad.addColorStop(0.88, '#38BDF8'); // Shimmering bright sky band
       fluidGrad.addColorStop(1, colorBack);
 
       ctx.fillStyle = fluidGrad;
@@ -156,8 +156,8 @@ export const LiquidMetal = memo(function LiquidMetal({
 
         const waveGrad = ctx.createLinearGradient(0, 0, w, h);
         waveGrad.addColorStop(0, `rgba(255, 255, 255, ${0.5 + i * 0.1})`);
-        waveGrad.addColorStop(0.35, `rgba(163, 230, 53, ${0.4 + i * 0.1})`);
-        waveGrad.addColorStop(0.7, `rgba(0, 251, 27, ${0.35 + i * 0.1})`);
+        waveGrad.addColorStop(0.35, `rgba(56, 189, 248, ${0.4 + i * 0.1})`);
+        waveGrad.addColorStop(0.7, `rgba(0, 136, 204, ${0.35 + i * 0.1})`);
         waveGrad.addColorStop(1, `rgba(0, 0, 0, 0.45)`);
 
         ctx.fillStyle = waveGrad;
@@ -243,12 +243,12 @@ export const LiquidMetalButton = forwardRef<
         {...props}
       >
         {/* Outer Liquid Metal Flowing Border Container */}
-        <div className="relative rounded-full overflow-hidden p-[2px] shadow-[0_4px_20px_rgba(0,251,27,0.35),0_1px_4px_rgba(0,251,27,0.2)] hover:shadow-[0_6px_30px_rgba(0,251,27,0.6),0_2px_8px_rgba(0,251,27,0.4)] transition-all duration-300">
+        <div className="relative rounded-full overflow-hidden p-[2px] shadow-[0_4px_20px_rgba(14,165,233,0.35),0_1px_4px_rgba(14,165,233,0.2)] hover:shadow-[0_6px_30px_rgba(14,165,233,0.6),0_2px_8px_rgba(14,165,233,0.4)] transition-all duration-300">
           
           {/* Dynamic Liquid Metal Flowing Border Canvas */}
           <LiquidMetal
-            colorBack="#042F0C"
-            colorTint="#00FB1B"
+            colorBack="#001F33"
+            colorTint="#0EA5E9"
             speed={0.8}
             repetition={4}
             distortion={0.3}
@@ -260,7 +260,7 @@ export const LiquidMetalButton = forwardRef<
           <div
             className={cn(
               'relative z-10 rounded-full flex items-center justify-center font-extrabold tracking-wide overflow-hidden transition-colors duration-200',
-              'bg-[#080C14] text-white',
+              'bg-[#0F172A] text-white keep-white',
               sizeStyles[size]
             )}
           >
@@ -273,7 +273,7 @@ export const LiquidMetalButton = forwardRef<
             {/* Sweeping Specular Lens Light Beam on Hover */}
             <div className="pointer-events-none absolute -inset-full top-0 w-1/2 h-full z-20 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 -translate-x-full group-hover:translate-x-[350%] transition-transform duration-1000 ease-out" />
 
-            {/* Icon (Neon Green Outline) */}
+            {/* Icon */}
             {icon && (
               <span className="relative z-30 text-accent group-hover:scale-110 transition-transform stroke-[2.5]">
                 {icon}

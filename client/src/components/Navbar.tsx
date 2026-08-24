@@ -63,14 +63,14 @@ export default function Navbar({ onOpenPalette }: { onOpenPalette: () => void })
         animate={{
           borderRadius: isMobileOpen ? '28px' : isHovered ? '32px' : '9999px',
           borderColor: isHovered || isMobileOpen
-            ? 'rgba(0, 251, 27, 0.7)'
+            ? 'rgba(0, 136, 204, 0.7)'
             : isLight
             ? 'rgba(255, 255, 255, 0.85)'
             : 'rgba(255, 255, 255, 0.12)',
           boxShadow: isHovered || isMobileOpen
             ? isLight
-              ? '0 20px 50px rgba(0, 251, 27, 0.35), 0 8px 32px rgba(31, 38, 135, 0.15), inset 0 2px 4px rgba(255, 255, 255, 0.95)'
-              : '0 20px 50px rgba(0, 251, 27, 0.35), 0 0 40px rgba(0, 0, 0, 0.95)'
+              ? '0 20px 50px rgba(0, 136, 204, 0.35), 0 8px 32px rgba(31, 38, 135, 0.15), inset 0 2px 4px rgba(255, 255, 255, 0.95)'
+              : '0 20px 50px rgba(0, 136, 204, 0.35), 0 0 40px rgba(0, 0, 0, 0.95)'
             : isLight
             ? '0 12px 35px rgba(31, 38, 135, 0.12), inset 0 1.5px 3px rgba(255, 255, 255, 0.95), inset 0 -1px 2px rgba(0, 0, 0, 0.05)'
             : '0 10px 30px rgba(0, 0, 0, 0.7)',
@@ -87,13 +87,13 @@ export default function Navbar({ onOpenPalette }: { onOpenPalette: () => void })
             : "bg-[#0B0F17]/90 text-white border-white/10"
         )}
       >
-        {/* Moving Neon Green Laser Line along Top Border (Exact Match to Screenshot) */}
+        {/* Moving Blue Laser Line along Top Border */}
         <div className="absolute inset-x-0 top-0 h-[2px] overflow-hidden pointer-events-none z-20">
-          <div className="w-1/3 h-full bg-gradient-to-r from-transparent via-[#00FB1B] to-transparent shadow-[0_0_10px_#00FB1B,0_0_20px_#00FB1B] animate-[shimmer_3s_linear_infinite]" />
+          <div className="w-1/3 h-full bg-gradient-to-r from-transparent via-[#3A86FF] to-transparent shadow-[0_0_10px_#3A86FF,0_0_20px_#3A86FF] animate-[shimmer_3s_linear_infinite]" />
         </div>
 
         {/* Continuous Perimeter Moving Laser Border Beam */}
-        <BorderBeam size={220} duration={6} colorFrom="#00FB1B" colorTo="transparent" borderWidth={1.5} />
+        <BorderBeam size={220} duration={6} colorFrom="#3A86FF" colorTo="transparent" borderWidth={1.5} />
 
         <div className="relative z-10 flex items-center justify-between gap-2 sm:gap-4 px-2">
           
@@ -102,7 +102,7 @@ export default function Navbar({ onOpenPalette }: { onOpenPalette: () => void })
             <div className={cn(
               "relative w-8 h-8 rounded-full flex items-center justify-center transition-all shadow-md border backdrop-blur-md",
               isLight
-                ? "bg-white/90 border-slate-200 group-hover:border-emerald-500 shadow-sm"
+                ? "bg-white/90 border-slate-200 group-hover:border-[#3A86FF] shadow-sm"
                 : "bg-white/5 border-white/10 group-hover:border-accent"
             )}>
               <Terminal className="w-4 h-4 text-accent group-hover:scale-110 transition-transform" />
@@ -114,7 +114,7 @@ export default function Navbar({ onOpenPalette }: { onOpenPalette: () => void })
             <div className="flex flex-col">
               <span className={cn(
                 "font-display font-extrabold text-xs sm:text-sm tracking-tight transition-colors flex items-center gap-0.5",
-                isLight ? "text-slate-950 group-hover:text-emerald-600" : "text-white group-hover:text-accent"
+                isLight ? "text-slate-950 group-hover:text-[#3A86FF]" : "text-white group-hover:text-accent"
               )}>
                 <span className="text-accent">DR.</span>Developer
               </span>
@@ -147,8 +147,8 @@ export default function Navbar({ onOpenPalette }: { onOpenPalette: () => void })
                         "px-3 py-1.5 text-xs font-bold rounded-full transition-all duration-200 whitespace-nowrap",
                         isActive
                           ? isLight
-                            ? "bg-emerald-600 text-white shadow-md font-extrabold"
-                            : "bg-white/15 text-accent border border-accent/40 font-extrabold shadow-[0_0_12px_rgba(0,251,27,0.2)]"
+                            ? "bg-[#3A86FF] text-white shadow-md font-extrabold"
+                            : "bg-white/15 text-accent border border-accent/40 font-extrabold shadow-[0_0_12px_rgba(58,134,255,0.3)]"
                           : isLight
                           ? "text-slate-900 hover:text-black hover:bg-slate-100"
                           : "text-customText-secondary hover:text-white hover:bg-white/10"
@@ -172,14 +172,14 @@ export default function Navbar({ onOpenPalette }: { onOpenPalette: () => void })
               className={cn(
                 "p-2 rounded-full border transition-all active:scale-90 cursor-pointer flex items-center justify-center",
                 isLight
-                  ? "bg-slate-100 border-slate-200 text-slate-900 hover:text-emerald-600"
+                  ? "bg-slate-100 border-slate-200 text-slate-900 hover:text-[#3A86FF]"
                   : "bg-white/5 border-white/10 text-customText-secondary hover:text-white hover:border-white/25 hover:bg-white/10"
               )}
             >
               {theme === 'dark' ? (
                 <Sun className="w-3.5 h-3.5 text-accent" />
               ) : (
-                <Moon className="w-3.5 h-3.5 text-emerald-600" />
+                <Moon className="w-3.5 h-3.5 text-[#3A86FF]" />
               )}
             </button>
 
@@ -190,17 +190,17 @@ export default function Navbar({ onOpenPalette }: { onOpenPalette: () => void })
               title={siteMode === '2d' ? 'Transform to 3D Immersive' : 'Transform to 2D Classic'}
               className="relative group cursor-pointer border-none bg-transparent p-0 outline-none transition-transform hover:scale-105 active:scale-95 disabled:opacity-50"
             >
-              <div className="relative rounded-full overflow-hidden p-[2px] shadow-[0_4px_16px_rgba(0,251,27,0.3)] hover:shadow-[0_6px_22px_rgba(0,251,27,0.55)] transition-all duration-300">
+              <div className="relative rounded-full overflow-hidden p-[2px] shadow-[0_4px_16px_rgba(14,165,233,0.3)] hover:shadow-[0_6px_22px_rgba(14,165,233,0.55)] transition-all duration-300">
                 <LiquidMetal
-                  colorBack="#042F0C"
-                  colorTint="#00FB1B"
+                  colorBack="#001F33"
+                  colorTint="#0EA5E9"
                   speed={0.8}
                   repetition={4}
                   distortion={0.3}
                   scale={1.2}
                   className="absolute inset-0 z-0 rounded-full"
                 />
-                <div className="relative z-10 rounded-full px-3 py-1.5 bg-[#080C14] text-white flex items-center gap-1.5 overflow-hidden">
+                <div className="relative z-10 rounded-full px-3 py-1.5 bg-[#0F172A] text-white keep-white flex items-center gap-1.5 overflow-hidden">
                   <div className="pointer-events-none absolute inset-x-0 top-0 h-1/2 rounded-t-full z-10 bg-gradient-to-b from-white/15 via-white/5 to-transparent" />
                   <div className="pointer-events-none absolute inset-0 rounded-full z-10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),inset_0_-1px_2px_rgba(0,0,0,0.8)]" />
                   <span className="relative z-30 text-accent group-hover:scale-110 transition-transform">
@@ -210,7 +210,7 @@ export default function Navbar({ onOpenPalette }: { onOpenPalette: () => void })
                       <Monitor className="w-3.5 h-3.5 stroke-[2.5]" />
                     )}
                   </span>
-                  <span className="relative z-30 text-white font-extrabold uppercase tracking-wider text-[10px] drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] hidden sm:inline">
+                  <span className="relative z-30 text-white keep-white font-extrabold uppercase tracking-wider text-[10px] drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] hidden sm:inline">
                     {siteMode === '2d' ? '3D' : '2D'}
                   </span>
                 </div>
@@ -224,7 +224,7 @@ export default function Navbar({ onOpenPalette }: { onOpenPalette: () => void })
               className={cn(
                 "px-2.5 py-1.5 rounded-full border transition-all active:scale-95 cursor-pointer flex items-center gap-1.5 shadow-sm",
                 isLight
-                  ? "bg-slate-100 border-slate-200 text-slate-900 hover:text-emerald-600"
+                  ? "bg-slate-100 border-slate-200 text-slate-900 hover:text-accent"
                   : "bg-white/5 border-white/10 text-customText-secondary hover:text-white hover:border-white/25 hover:bg-white/10"
               )}
             >
@@ -242,23 +242,23 @@ export default function Navbar({ onOpenPalette }: { onOpenPalette: () => void })
               href="/contact"
               className="hidden sm:inline-block relative group cursor-pointer border-none bg-transparent p-0 outline-none transition-transform hover:scale-105 active:scale-95"
             >
-              <div className="relative rounded-full overflow-hidden p-[2px] shadow-[0_4px_18px_rgba(0,251,27,0.35)] hover:shadow-[0_6px_25px_rgba(0,251,27,0.6)] transition-all duration-300">
+              <div className="relative rounded-full overflow-hidden p-[2px] shadow-[0_4px_18px_rgba(14,165,233,0.35)] hover:shadow-[0_6px_25px_rgba(14,165,233,0.6)] transition-all duration-300">
                 <LiquidMetal
-                  colorBack="#042F0C"
-                  colorTint="#00FB1B"
+                  colorBack="#001F33"
+                  colorTint="#0EA5E9"
                   speed={0.8}
                   repetition={4}
                   distortion={0.3}
                   scale={1.2}
                   className="absolute inset-0 z-0 rounded-full"
                 />
-                <div className="relative z-10 rounded-full px-4 py-2 bg-[#080C14] text-white flex items-center gap-1.5 overflow-hidden">
+                <div className="relative z-10 rounded-full px-4 py-2 bg-[#0F172A] text-white keep-white flex items-center gap-1.5 overflow-hidden">
                   <div className="pointer-events-none absolute inset-x-0 top-0 h-1/2 rounded-t-full z-10 bg-gradient-to-b from-white/15 via-white/5 to-transparent" />
                   <div className="pointer-events-none absolute inset-0 rounded-full z-10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),inset_0_-1px_2px_rgba(0,0,0,0.8)]" />
                   <span className="relative z-30 text-accent group-hover:scale-110 transition-transform">
                     <ArrowUpRight className="w-3.5 h-3.5 stroke-[3]" />
                   </span>
-                  <span className="relative z-30 text-white font-extrabold uppercase tracking-wider text-xs drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+                  <span className="relative z-30 text-white keep-white font-extrabold uppercase tracking-wider text-xs drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
                     Hire Me
                   </span>
                 </div>
@@ -271,7 +271,7 @@ export default function Navbar({ onOpenPalette }: { onOpenPalette: () => void })
               title={isMobileOpen ? 'Close Menu' : 'Open Navigation Menu'}
               className={cn(
                 "md:hidden p-2 rounded-full border transition-colors flex items-center justify-center shadow-lg active:scale-90",
-                isLight ? "bg-white/80 border-white/90 text-slate-900 hover:text-emerald-600" : "bg-dark-card border-white/15 text-white hover:text-accent"
+                isLight ? "bg-white/80 border-white/90 text-slate-900 hover:text-accent" : "bg-dark-card border-white/15 text-white hover:text-accent"
               )}
             >
               {isMobileOpen ? (
@@ -327,8 +327,8 @@ export default function Navbar({ onOpenPalette }: { onOpenPalette: () => void })
                         "py-2.5 px-4 rounded-xl text-sm font-bold transition-all flex items-center justify-between group",
                         isActive
                           ? isLight
-                            ? "bg-emerald-600 text-white font-extrabold"
-                            : "bg-accent text-dark-bg font-extrabold shadow-accent-glow"
+                            ? "bg-[#3A86FF] text-white font-extrabold"
+                            : "bg-accent text-white font-extrabold shadow-accent-glow"
                           : isLight
                           ? "text-slate-900 hover:text-black hover:bg-white/80"
                           : "text-customText-secondary hover:text-white hover:bg-white/10"
@@ -349,22 +349,22 @@ export default function Navbar({ onOpenPalette }: { onOpenPalette: () => void })
                 <Link
                   href="/contact"
                   onClick={() => setIsMobileOpen(false)}
-                  className="relative block w-full rounded-2xl overflow-hidden p-[2px] shadow-[0_4px_20px_rgba(0,251,27,0.35)]"
+                  className="relative block w-full rounded-2xl overflow-hidden p-[2px] shadow-[0_4px_20px_rgba(14,165,233,0.35)]"
                 >
                   <LiquidMetal
-                    colorBack="#042F0C"
-                    colorTint="#00FB1B"
+                    colorBack="#001F33"
+                    colorTint="#0EA5E9"
                     speed={0.8}
                     repetition={4}
                     distortion={0.3}
                     scale={1.2}
                     className="absolute inset-0 z-0 rounded-2xl"
                   />
-                  <div className="relative z-10 py-3.5 px-4 text-center rounded-2xl bg-[#080C14] text-white font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 overflow-hidden">
+                  <div className="relative z-10 py-3.5 px-4 text-center rounded-2xl bg-[#0F172A] text-white keep-white font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 overflow-hidden">
                     <div className="pointer-events-none absolute inset-x-0 top-0 h-1/2 rounded-t-2xl z-10 bg-gradient-to-b from-white/15 via-white/5 to-transparent" />
                     <div className="pointer-events-none absolute inset-0 rounded-2xl z-10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),inset_0_-1px_2px_rgba(0,0,0,0.8)]" />
                     <span className="text-accent font-bold">✔</span>
-                    <span className="relative z-30 text-white font-extrabold uppercase tracking-wider drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+                    <span className="relative z-30 text-white keep-white font-extrabold uppercase tracking-wider drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
                       Hire DR.Developer
                     </span>
                   </div>

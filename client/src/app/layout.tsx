@@ -147,7 +147,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#050505',
+  themeColor: '#F8FAFC',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,
@@ -164,7 +164,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const servicesSchema = getServicesSchema();
 
   return (
-    <html lang="en" className={`${spaceGrotesk.variable} ${inter.variable} dark`}>
+    <html lang="en" className={`${spaceGrotesk.variable} ${inter.variable} light`}>
       <head>
         <script
           type="application/ld+json"

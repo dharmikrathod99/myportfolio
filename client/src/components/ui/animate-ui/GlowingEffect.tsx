@@ -13,7 +13,7 @@ interface GlowingEffectProps {
 export function GlowingEffect({
   children,
   className = '',
-  glowColor = '#00FB1B',
+  glowColor = '#3A86FF',
   spread = 400,
 }: GlowingEffectProps) {
   const containerRef = useRef<HTMLDivElement>(null);

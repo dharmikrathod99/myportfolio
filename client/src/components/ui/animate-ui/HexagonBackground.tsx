@@ -12,7 +12,7 @@ interface HexagonBackgroundProps {
 
 export function HexagonBackground({
   className = '',
-  glowColor = '#00FB1B',
+  glowColor = '#0088CC',
   hexagonSize = 36,
 }: HexagonBackgroundProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -159,8 +159,8 @@ export function HexagonBackground({
 
               drawHexPath(ctx, cx, cy);
               ctx.fillStyle = isDark
-                ? `rgba(0, 251, 27, ${0.16 * factor})`
-                : `rgba(0, 200, 20, ${0.1 * factor})`;
+                ? `rgba(0, 136, 204, ${0.16 * factor})`
+                : `rgba(0, 136, 204, ${0.1 * factor})`;
               ctx.fill();
 
               ctx.strokeStyle = glowColor;

@@ -48,7 +48,7 @@ export function VengeanceBentoGrid({ items }: { items: VengeanceBentoItem[] }) {
               <div
                 className="pointer-events-none absolute -inset-px rounded-3xl transition-opacity duration-300"
                 style={{
-                  background: `radial-gradient(300px circle at ${mousePos.x}px ${mousePos.y}px, rgba(0, 251, 27, 0.18), transparent 80%)`,
+                  background: `radial-gradient(300px circle at ${mousePos.x}px ${mousePos.y}px, rgba(0, 136, 204, 0.18), transparent 80%)`,
                 }}
               />
             )}

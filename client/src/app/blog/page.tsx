@@ -34,7 +34,7 @@ export default function BlogPage() {
               <BookOpen className="w-3.5 h-3.5" /> DEDICATED BLOG PAGE // /blog
             </span>
             <h1 className="font-display font-extrabold text-4xl sm:text-6xl text-white tracking-tight">
-              Engineering <span className="bg-gradient-to-r from-accent via-emerald-400 to-white bg-clip-text text-transparent">Blog & Articles</span>
+              Engineering <span className="bg-gradient-to-r from-accent via-[#38BDF8] to-white bg-clip-text text-transparent">Blog & Articles</span>
             </h1>
             <p className="text-base sm:text-xl text-customText-secondary">
               Deep-dive technical writings, architecture tutorials, performance benchmarks, and MERN best practices.

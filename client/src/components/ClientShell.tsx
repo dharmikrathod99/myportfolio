@@ -7,7 +7,7 @@ import ReadingProgress from '@/components/ReadingProgress';
 import CommandPalette from '@/components/CommandPalette';
 import SmoothScroll from '@/components/SmoothScroll';
 import TransformTransition from '@/components/TransformTransition';
-import { HexagonBackground } from '@/components/ui/animate-ui';
+import { FloatingAnimationBackground } from '@/components/ui/animate-ui';
 import { ThemeProvider, useTheme } from '@/context/ThemeContext';
 
 // Lazy load Three.js shell to avoid loading WebGL when not needed
@@ -39,12 +39,17 @@ function ShellContent({ children }: { children: React.ReactNode }) {
       ) : (
         /* 2D Classic Mode */
         <SmoothScroll>
-          <main className="relative min-h-screen bg-dark-bg text-customText-primary selection:bg-accent selection:text-dark-bg overflow-x-hidden w-full max-w-[100vw]">
+          <main className="relative min-h-screen bg-transparent text-customText-primary selection:bg-accent selection:text-white overflow-x-hidden w-full max-w-[100vw]">
             {/* Top Reading Progress Bar */}
             <ReadingProgress />
 
-            {/* Interactive Animate UI Hexagon Background covering whole website */}
-            <HexagonBackground glowColor="#00FB1B" hexagonSize={36} />
+            {/* Framer WebGL Simplex Noise Floating Animation Background */}
+            <FloatingAnimationBackground
+              colorStops={['#764105', '#1818E7', '#FF299B']}
+              amplitude={1.0}
+              blend={0.5}
+              speed={1.0}
+            />
 
             {/* Dynamic Liquid Metal Floating Navbar */}
             <Navbar onOpenPalette={() => setCommandPaletteOpen(true)} />
@@ -56,7 +61,7 @@ function ShellContent({ children }: { children: React.ReactNode }) {
             />
 
             {/* Main Content Area */}
-            <div className="relative z-10 space-y-0 overflow-x-hidden w-full pt-20 sm:pt-24 min-h-[calc(100vh-200px)]">
+            <div className="relative z-10 space-y-0 overflow-x-hidden w-full pt-16 sm:pt-20 min-h-[calc(100vh-200px)]">
               {children}
             </div>
 

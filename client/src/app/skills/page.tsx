@@ -36,7 +36,7 @@ export default function SkillsPage() {
               <Code2 className="w-3.5 h-3.5" /> DEDICATED SKILLS PAGE // /skills
             </span>
             <h1 className="font-display font-extrabold text-4xl sm:text-6xl text-white tracking-tight">
-              Technical <span className="bg-gradient-to-r from-accent via-emerald-400 to-white bg-clip-text text-transparent">Skills & Matrix</span>
+              Technical <span className="bg-gradient-to-r from-accent via-[#38BDF8] to-white bg-clip-text text-transparent">Skills & Matrix</span>
             </h1>
             <p className="text-base sm:text-xl text-customText-secondary">
               Comprehensive full-stack technology matrix, frameworks, databases, DevOps, and engineering standards.

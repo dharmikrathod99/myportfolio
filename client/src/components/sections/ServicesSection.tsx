@@ -58,12 +58,12 @@ export default function ServicesSection() {
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: idx * 0.08 }}
             >
-              <GlowingEffect glowColor="#00FB1B" spread={350} className="h-full">
+              <GlowingEffect glowColor="#3A86FF" spread={350} className="h-full">
                 <div className="p-6 rounded-2xl bg-dark-surface border border-white/10 hover:border-accent/50 transition-all duration-300 flex flex-col justify-between group relative overflow-hidden shadow-xl h-full">
                   
                   {/* Animate UI BorderBeam on Popular Items */}
                   {service.popular && (
-                    <BorderBeam size={180} duration={8} colorFrom="#00FB1B" />
+                    <BorderBeam size={180} duration={8} colorFrom="#3A86FF" />
                   )}
 
                   {/* Popular Badge */}

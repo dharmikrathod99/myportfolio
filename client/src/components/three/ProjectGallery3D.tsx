@@ -43,12 +43,12 @@ function ProjectCard3D({ project, index, total }: {
           />
         </RoundedBox>
 
-        {/* Green accent border glow */}
+        {/* Blue accent border glow */}
         <RoundedBox args={[4.08, 2.58, 0.08]} radius={0.17} smoothness={4} position={[0, 0, -0.02]}>
           <meshBasicMaterial
-            color="#00FB1B"
+            color="#3A86FF"
             transparent
-            opacity={0.15}
+            opacity={0.2}
           />
         </RoundedBox>
 
@@ -56,11 +56,11 @@ function ProjectCard3D({ project, index, total }: {
         <Billboard position={[0, 0.5, 0.1]}>
           <Text
             fontSize={0.28}
-            color="#FFFFFF"
+            color="#3A86FF"
             anchorX="center"
             anchorY="middle"
             maxWidth={3.5}
-            outlineWidth={0.01}
+            outlineWidth={0.02}
             outlineColor="#000000"
           >
             {project.title}
@@ -71,7 +71,7 @@ function ProjectCard3D({ project, index, total }: {
         <Billboard position={[0, -0.15, 0.1]}>
           <Text
             fontSize={0.15}
-            color="#00FB1B"
+            color="#3A86FF"
             anchorX="center"
             anchorY="middle"
             letterSpacing={0.1}
@@ -84,17 +84,17 @@ function ProjectCard3D({ project, index, total }: {
         <Billboard position={[0, -0.6, 0.1]}>
           <Text
             fontSize={0.13}
-            color="#A3A3A3"
+            color="#94A3B8"
             anchorX="center"
             anchorY="middle"
             maxWidth={3.5}
           >
-            {project.subtitle}
+            {project.description.slice(0, 80)}...
           </Text>
         </Billboard>
 
         {/* Small glow */}
-        <pointLight intensity={0.15} color="#00FB1B" distance={3} position={[0, 0, 1]} />
+        <pointLight intensity={0.25} color="#3A86FF" distance={3} position={[0, 0, 1]} />
       </Float>
     </group>
   );
@@ -109,7 +109,7 @@ export default function ProjectGallery3D() {
       <Billboard position={[0, 5, 0]}>
         <Text
           fontSize={0.6}
-          color="#00FB1B"
+          color="#3A86FF"
           anchorX="center"
           anchorY="middle"
           outlineWidth={0.03}
@@ -133,7 +133,7 @@ export default function ProjectGallery3D() {
       {/* Center ambient glow */}
       <mesh position={[0, 0, 0]} scale={2}>
         <sphereGeometry args={[1, 16, 16]} />
-        <meshBasicMaterial color="#00FB1B" transparent opacity={0.02} />
+        <meshBasicMaterial color="#3A86FF" transparent opacity={0.03} />
       </mesh>
     </group>
   );

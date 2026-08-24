@@ -3,7 +3,7 @@
 import React, { useRef, useMemo } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
-import { Text3D, Center, Float } from '@react-three/drei';
+import { Float } from '@react-three/drei';
 
 export default function HeroScene() {
   const particlesRef = useRef<THREE.Points>(null);
@@ -62,7 +62,7 @@ export default function HeroScene() {
           />
         </bufferGeometry>
         <pointsMaterial
-          color="#00FB1B"
+          color="#3A86FF"
           size={0.12}
           transparent
           opacity={0.7}
@@ -72,44 +72,31 @@ export default function HeroScene() {
         />
       </points>
 
-      {/* Rotating Wireframe Icosahedron */}
-      <Float speed={1.5} rotationIntensity={0.3} floatIntensity={0.5}>
-        <mesh ref={icoRef} scale={3}>
-          <icosahedronGeometry args={[1, 1]} />
+      {/* Floating Wireframe Icosahedron */}
+      <Float speed={1.5} rotationIntensity={0.5} floatIntensity={1}>
+        <mesh ref={icoRef} position={[0, -2, -2]}>
+          <icosahedronGeometry args={[2.5, 1]} />
           <meshBasicMaterial
-            color="#00FB1B"
+            color="#3A86FF"
             wireframe
             transparent
-            opacity={0.15}
+            opacity={0.35}
           />
         </mesh>
       </Float>
 
-      {/* Hero Title - Using simple mesh text since Text3D needs fonts */}
-      <Float speed={2} rotationIntensity={0.1} floatIntensity={0.3}>
-        <group position={[0, 0, 0]}>
-          {/* Name */}
-          <mesh position={[0, 0.8, 0]}>
-            <planeGeometry args={[12, 1.5]} />
-            <meshBasicMaterial transparent opacity={0} />
-          </mesh>
-
-          {/* Inner glow sphere */}
-          <mesh position={[0, 0, -2]} scale={4}>
-            <sphereGeometry args={[1, 32, 32]} />
-            <meshBasicMaterial
-              color="#00FB1B"
-              transparent
-              opacity={0.03}
-            />
-          </mesh>
-        </group>
+      {/* Outer Glow Ring */}
+      <Float speed={1.2} rotationIntensity={0.3} floatIntensity={0.8}>
+        <mesh position={[0, -2, -2]} rotation={[Math.PI / 3, 0, 0]}>
+          <torusGeometry args={[3.2, 0.02, 16, 100]} />
+          <meshBasicMaterial color="#60A5FA" transparent opacity={0.4} />
+        </mesh>
       </Float>
 
       {/* Accent Light Sources */}
-      <pointLight position={[10, 10, 10]} intensity={0.5} color="#00FB1B" />
-      <pointLight position={[-10, -5, 5]} intensity={0.3} color="#A3E635" />
-      <pointLight position={[0, 5, -10]} intensity={0.2} color="#FFFFFF" />
+      <pointLight position={[10, 10, 10]} intensity={0.6} color="#3A86FF" />
+      <pointLight position={[-10, -5, 5]} intensity={0.3} color="#94A3B8" />
+      <pointLight position={[0, 5, -10]} intensity={0.2} color="#E2E8F0" />
     </group>
   );
 }

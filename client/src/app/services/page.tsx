@@ -37,7 +37,7 @@ export default function ServicesPage() {
               <Briefcase className="w-3.5 h-3.5" /> DEDICATED SERVICES PAGE // /services
             </span>
             <h1 className="font-display font-extrabold text-4xl sm:text-6xl text-white tracking-tight">
-              Engineering <span className="bg-gradient-to-r from-accent via-emerald-400 to-white bg-clip-text text-transparent">Services & Solutions</span>
+              Engineering <span className="bg-gradient-to-r from-accent via-[#38BDF8] to-white bg-clip-text text-transparent">Services & Solutions</span>
             </h1>
             <p className="text-base sm:text-xl text-customText-secondary">
               End-to-end full stack development, API design, performance optimization, and cloud architecture.

@@ -16,7 +16,7 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>('dark');
+  const [theme, setTheme] = useState<Theme>('light');
   const [siteMode, setSiteMode] = useState<SiteMode>('2d');
   const [isTransitioning, setIsTransitioning] = useState(false);
 
@@ -24,15 +24,16 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const savedTheme = localStorage.getItem('portfolio-theme') as Theme | null;
     if (savedTheme) {
       setTheme(savedTheme);
-      if (savedTheme === 'light') {
-        document.documentElement.classList.remove('dark');
-        document.documentElement.classList.add('light');
-      } else {
+      if (savedTheme === 'dark') {
         document.documentElement.classList.remove('light');
         document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+        document.documentElement.classList.add('light');
       }
     } else {
-      document.documentElement.classList.add('dark');
+      document.documentElement.classList.remove('dark');
+      document.documentElement.classList.add('light');
     }
 
     const savedMode = localStorage.getItem('portfolio-site-mode') as SiteMode | null;

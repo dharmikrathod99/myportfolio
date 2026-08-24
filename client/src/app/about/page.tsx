@@ -44,7 +44,7 @@ export default function AboutPage() {
               <User className="w-3.5 h-3.5" /> DEDICATED ABOUT PAGE // /about
             </span>
             <h1 className="font-display font-extrabold text-4xl sm:text-6xl text-white tracking-tight leading-none">
-              About <span className="bg-gradient-to-r from-accent via-emerald-400 to-white bg-clip-text text-transparent">Dharmik Rathod</span>
+              About <span className="bg-gradient-to-r from-accent via-[#38BDF8] to-white bg-clip-text text-transparent">Dharmik Rathod</span>
             </h1>
             <p className="text-base sm:text-xl text-customText-secondary leading-relaxed font-sans">
               Software Engineer & MERN Stack Developer building scalable, ultra-fast web applications and high-impact digital experiences.
@@ -57,21 +57,21 @@ export default function AboutPage() {
                 rel="noopener noreferrer"
                 className="relative group cursor-pointer border-none bg-transparent p-0 outline-none transition-transform hover:scale-105 active:scale-95"
               >
-                <div className="relative rounded-full overflow-hidden p-[2px] shadow-[0_4px_18px_rgba(0,251,27,0.35)] hover:shadow-[0_6px_28px_rgba(0,251,27,0.6)] transition-all duration-300">
+                <div className="relative rounded-full overflow-hidden p-[2px] shadow-[0_4px_18px_rgba(58,134,255,0.35)] hover:shadow-[0_6px_28px_rgba(58,134,255,0.6)] transition-all duration-300">
                   <LiquidMetal
-                    colorBack="#042F0C"
-                    colorTint="#00FB1B"
+                    colorBack="#001F33"
+                    colorTint="#3A86FF"
                     speed={0.8}
                     repetition={4}
                     distortion={0.3}
                     scale={1.2}
                     className="absolute inset-0 z-0 rounded-full"
                   />
-                  <div className="relative z-10 rounded-full px-5 py-2.5 bg-[#080C14] text-white flex items-center gap-2 overflow-hidden">
+                  <div className="relative z-10 rounded-full px-5 py-2.5 bg-[#0F172A] text-white keep-white flex items-center gap-2 overflow-hidden">
                     <div className="pointer-events-none absolute inset-x-0 top-0 h-1/2 rounded-t-full z-10 bg-gradient-to-b from-white/15 via-white/5 to-transparent" />
                     <div className="pointer-events-none absolute inset-0 rounded-full z-10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),inset_0_-1px_2px_rgba(0,0,0,0.8)]" />
                     <Download className="w-4 h-4 text-accent relative z-30" />
-                    <span className="relative z-30 text-white font-extrabold uppercase tracking-wider text-xs drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+                    <span className="relative z-30 text-white keep-white font-extrabold uppercase tracking-wider text-xs drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
                       Download Resume
                     </span>
                   </div>
@@ -82,21 +82,21 @@ export default function AboutPage() {
                 href="/contact"
                 className="relative group cursor-pointer border-none bg-transparent p-0 outline-none transition-transform hover:scale-105 active:scale-95"
               >
-                <div className="relative rounded-full overflow-hidden p-[2px] shadow-[0_4px_16px_rgba(0,251,27,0.25)] hover:shadow-[0_6px_24px_rgba(0,251,27,0.5)] transition-all duration-300">
+                <div className="relative rounded-full overflow-hidden p-[2px] shadow-[0_4px_16px_rgba(14,165,233,0.25)] hover:shadow-[0_6px_24px_rgba(14,165,233,0.5)] transition-all duration-300">
                   <LiquidMetal
-                    colorBack="#042F0C"
-                    colorTint="#00FB1B"
+                    colorBack="#001F33"
+                    colorTint="#0EA5E9"
                     speed={0.6}
                     repetition={3}
                     distortion={0.25}
                     scale={1.2}
                     className="absolute inset-0 z-0 rounded-full opacity-70 group-hover:opacity-100 transition-opacity"
                   />
-                  <div className="relative z-10 rounded-full px-5 py-2.5 bg-[#080C14] text-white flex items-center gap-2 overflow-hidden">
+                  <div className="relative z-10 rounded-full px-5 py-2.5 bg-[#0F172A] text-white keep-white flex items-center gap-2 overflow-hidden">
                     <div className="pointer-events-none absolute inset-x-0 top-0 h-1/2 rounded-t-full z-10 bg-gradient-to-b from-white/15 via-white/5 to-transparent" />
                     <div className="pointer-events-none absolute inset-0 rounded-full z-10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),inset_0_-1px_2px_rgba(0,0,0,0.8)]" />
                     <Mail className="w-4 h-4 text-accent relative z-30" />
-                    <span className="relative z-30 text-white font-extrabold uppercase tracking-wider text-xs drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+                    <span className="relative z-30 text-white keep-white font-extrabold uppercase tracking-wider text-xs drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
                       Get In Touch
                     </span>
                   </div>

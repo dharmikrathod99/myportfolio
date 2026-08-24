@@ -11,7 +11,7 @@ interface VengeanceSpotlightButtonProps extends React.ButtonHTMLAttributes<HTMLB
 export function VengeanceSpotlightButton({
   children,
   className = '',
-  glowColor = 'rgba(0, 251, 27, 0.4)',
+  glowColor = 'rgba(0, 136, 204, 0.4)',
   ...props
 }: VengeanceSpotlightButtonProps) {
   const buttonRef = useRef<HTMLButtonElement | null>(null);

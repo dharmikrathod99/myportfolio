@@ -35,7 +35,7 @@ export default function ContactPage() {
               <Mail className="w-3.5 h-3.5" /> DEDICATED CONTACT PAGE // /contact
             </span>
             <h1 className="font-display font-extrabold text-4xl sm:text-6xl text-white tracking-tight">
-              Get In <span className="bg-gradient-to-r from-accent via-emerald-400 to-white bg-clip-text text-transparent">Touch</span>
+              Get In <span className="bg-gradient-to-r from-accent via-[#38BDF8] to-white bg-clip-text text-transparent">Touch</span>
             </h1>
             <p className="text-base sm:text-xl text-customText-secondary">
               Let's build scalable software together. Send an inquiry or schedule a direct consultation.

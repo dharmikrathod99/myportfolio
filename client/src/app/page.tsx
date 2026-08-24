@@ -125,7 +125,7 @@ export default function Home() {
               <Sparkles className="w-3.5 h-3.5" /> Full Stack MERN & AI Engineer
             </span>
             <h2 className="text-3xl sm:text-5xl font-display font-extrabold text-white tracking-tight leading-tight">
-              Building <span className="bg-gradient-to-r from-accent via-emerald-400 to-white bg-clip-text text-transparent">AI-Powered Web Applications</span> That Drive Business Growth
+              Building <span className="bg-gradient-to-r from-accent via-[#38BDF8] to-white bg-clip-text text-transparent">AI-Powered Web Applications</span> That Drive Business Growth
             </h2>
             
             <p className="text-base sm:text-lg text-customText-primary leading-relaxed">
@@ -150,7 +150,7 @@ export default function Home() {
             <Cpu className="w-3.5 h-3.5" /> Development Expertise
           </span>
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-display font-extrabold text-white tracking-tight">
-            Professional <span className="bg-gradient-to-r from-accent via-emerald-400 to-white bg-clip-text text-transparent">Full Stack & AI Focus</span>
+            Professional <span className="bg-gradient-to-r from-accent via-[#38BDF8] to-white bg-clip-text text-transparent">Full Stack & AI Focus</span>
           </h2>
           <p className="mt-4 text-sm sm:text-base text-customText-secondary">
             With expertise in React.js, Node.js, Express.js, MongoDB, TypeScript, AI APIs, and Cloud Deployment, every project is built for speed, security, and scalability.
@@ -181,7 +181,7 @@ export default function Home() {
             <Building2 className="w-3.5 h-3.5" /> Business Solutions
           </span>
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-display font-extrabold text-white tracking-tight">
-            Helping Businesses <span className="bg-gradient-to-r from-accent via-emerald-400 to-white bg-clip-text text-transparent">Build Faster, Smarter & Better</span>
+            Helping Businesses <span className="bg-gradient-to-r from-accent via-[#38BDF8] to-white bg-clip-text text-transparent">Build Faster, Smarter & Better</span>
           </h2>
           <p className="mt-4 text-sm sm:text-base text-customText-secondary">
             Today's businesses need digital products that generate leads, improve customer experience, and automate workflows.
@@ -246,7 +246,7 @@ export default function Home() {
             <Layers className="w-3.5 h-3.5" /> Modern Stack Matrix
           </span>
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-display font-extrabold text-white tracking-tight">
-            Technologies <span className="bg-gradient-to-r from-accent via-emerald-400 to-white bg-clip-text text-transparent">I Work With</span>
+            Technologies <span className="bg-gradient-to-r from-accent via-[#38BDF8] to-white bg-clip-text text-transparent">I Work With</span>
           </h2>
         </div>
 
@@ -316,7 +316,7 @@ export default function Home() {
             {/* International Locations */}
             <div className="p-6 rounded-2xl bg-white/5 border border-white/10">
               <h3 className="text-base font-extrabold text-white flex items-center gap-2 mb-4">
-                <Globe2 className="w-4 h-4 text-emerald-400" /> International Clients
+                <Globe2 className="w-4 h-4 text-accent" /> International Clients
               </h3>
               <div className="flex flex-wrap gap-2">
                 {internationalLocations.map((loc) => (
@@ -361,7 +361,7 @@ export default function Home() {
         <div className="relative rounded-3xl overflow-hidden p-8 sm:p-14 border border-accent/30 bg-dark-card/90 text-center">
           <LiquidMetal
             colorBack="#070A0F"
-            colorTint="#00FB1B"
+            colorTint="#3A86FF"
             speed={0.4}
             className="absolute inset-0 opacity-25 pointer-events-none"
           />
@@ -370,7 +370,7 @@ export default function Home() {
               <Rocket className="w-3.5 h-3.5" /> Start Your Project
             </span>
             <h2 className="text-3xl sm:text-5xl font-display font-extrabold text-white tracking-tight">
-              Let's Build Something <span className="bg-gradient-to-r from-accent via-emerald-400 to-white bg-clip-text text-transparent">Extraordinary</span>
+              Let's Build Something <span className="bg-gradient-to-r from-accent via-[#38BDF8] to-white bg-clip-text text-transparent">Extraordinary</span>
             </h2>
             <p className="text-sm sm:text-base text-customText-secondary leading-relaxed">
               If you're looking for a professional <strong className="text-white">AI Software Engineer</strong>, <strong className="text-white">Full Stack MERN Developer</strong>, or <strong className="text-white">Custom Software Developer</strong> who can build modern, scalable, and SEO-optimized digital products, I'd love to help.
@@ -380,21 +380,21 @@ export default function Home() {
                 href="/contact"
                 className="relative group cursor-pointer border-none bg-transparent p-0 outline-none transition-transform hover:scale-105 active:scale-95"
               >
-                <div className="relative rounded-full overflow-hidden p-[2px] shadow-[0_4px_22px_rgba(0,251,27,0.35)] hover:shadow-[0_6px_32px_rgba(0,251,27,0.6)] transition-all duration-300">
+                <div className="relative rounded-full overflow-hidden p-[2px] shadow-[0_4px_22px_rgba(14,165,233,0.35)] hover:shadow-[0_6px_32px_rgba(14,165,233,0.6)] transition-all duration-300">
                   <LiquidMetal
-                    colorBack="#042F0C"
-                    colorTint="#00FB1B"
+                    colorBack="#001F33"
+                    colorTint="#0EA5E9"
                     speed={0.8}
                     repetition={4}
                     distortion={0.3}
                     scale={1.2}
                     className="absolute inset-0 z-0 rounded-full"
                   />
-                  <div className="relative z-10 rounded-full px-8 py-3.5 bg-[#080C14] text-white flex items-center gap-2.5 overflow-hidden">
+                  <div className="relative z-10 rounded-full px-8 py-3.5 bg-[#0F172A] text-white keep-white flex items-center gap-2.5 overflow-hidden">
                     <div className="pointer-events-none absolute inset-x-0 top-0 h-1/2 rounded-t-full z-10 bg-gradient-to-b from-white/15 via-white/5 to-transparent" />
                     <div className="pointer-events-none absolute inset-0 rounded-full z-10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),inset_0_-1px_2px_rgba(0,0,0,0.8)]" />
                     <Mail className="w-4 h-4 text-accent relative z-30" />
-                    <span className="relative z-30 text-white font-extrabold uppercase tracking-wider text-sm drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+                    <span className="relative z-30 text-white keep-white font-extrabold uppercase tracking-wider text-sm drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
                       Let's Work Together
                     </span>
                     <ArrowRight className="w-4 h-4 text-accent relative z-30" />
@@ -406,20 +406,20 @@ export default function Home() {
                 href="/projects"
                 className="relative group cursor-pointer border-none bg-transparent p-0 outline-none transition-transform hover:scale-105 active:scale-95"
               >
-                <div className="relative rounded-full overflow-hidden p-[2px] shadow-[0_4px_18px_rgba(0,251,27,0.25)] hover:shadow-[0_6px_28px_rgba(0,251,27,0.5)] transition-all duration-300">
+                <div className="relative rounded-full overflow-hidden p-[2px] shadow-[0_4px_18px_rgba(14,165,233,0.25)] hover:shadow-[0_6px_28px_rgba(14,165,233,0.5)] transition-all duration-300">
                   <LiquidMetal
-                    colorBack="#042F0C"
-                    colorTint="#00FB1B"
+                    colorBack="#001F33"
+                    colorTint="#0EA5E9"
                     speed={0.6}
                     repetition={3}
                     distortion={0.25}
                     scale={1.2}
                     className="absolute inset-0 z-0 rounded-full opacity-70 group-hover:opacity-100 transition-opacity"
                   />
-                  <div className="relative z-10 rounded-full px-8 py-3.5 bg-[#080C14] text-white flex items-center gap-2 overflow-hidden">
+                  <div className="relative z-10 rounded-full px-8 py-3.5 bg-[#0F172A] text-white keep-white flex items-center gap-2 overflow-hidden">
                     <div className="pointer-events-none absolute inset-x-0 top-0 h-1/2 rounded-t-full z-10 bg-gradient-to-b from-white/15 via-white/5 to-transparent" />
                     <div className="pointer-events-none absolute inset-0 rounded-full z-10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),inset_0_-1px_2px_rgba(0,0,0,0.8)]" />
-                    <span className="relative z-30 text-white font-extrabold uppercase tracking-wider text-sm drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+                    <span className="relative z-30 text-white keep-white font-extrabold uppercase tracking-wider text-sm drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
                       Explore Projects
                     </span>
                   </div>

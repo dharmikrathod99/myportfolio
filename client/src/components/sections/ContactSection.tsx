@@ -274,26 +274,26 @@ export default function ContactSection() {
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="relative w-full rounded-2xl overflow-hidden p-[2px] shadow-[0_4px_22px_rgba(0,251,27,0.35)] hover:shadow-[0_6px_32px_rgba(0,251,27,0.6)] transition-all active:scale-[0.98] disabled:opacity-50 group cursor-pointer border-none"
+                    className="relative w-full rounded-2xl overflow-hidden p-[2px] shadow-[0_4px_22px_rgba(14,165,233,0.35)] hover:shadow-[0_6px_32px_rgba(14,165,233,0.6)] transition-all active:scale-[0.98] disabled:opacity-50 group cursor-pointer border-none"
                   >
                     <LiquidMetal
-                      colorBack="#042F0C"
-                      colorTint="#00FB1B"
+                      colorBack="#001F33"
+                      colorTint="#0EA5E9"
                       speed={0.8}
                       repetition={4}
                       distortion={0.3}
                       scale={1.2}
                       className="absolute inset-0 z-0 rounded-2xl"
                     />
-                    <div className="relative z-10 py-4 px-6 rounded-2xl bg-[#080C14] text-white flex items-center justify-center gap-2.5 overflow-hidden">
+                    <div className="relative z-10 py-4 px-6 rounded-2xl bg-[#0F172A] text-white keep-white flex items-center justify-center gap-2.5 overflow-hidden">
                       <div className="pointer-events-none absolute inset-x-0 top-0 h-1/2 rounded-t-2xl z-10 bg-gradient-to-b from-white/15 via-white/5 to-transparent" />
                       <div className="pointer-events-none absolute inset-0 rounded-2xl z-10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),inset_0_-1px_2px_rgba(0,0,0,0.8)]" />
                       {isSubmitting ? (
-                        <span className="relative z-30 text-white font-extrabold uppercase tracking-wider text-sm">Sending Inquiry...</span>
+                        <span className="relative z-30 text-white keep-white font-extrabold uppercase tracking-wider text-sm">Sending Inquiry...</span>
                       ) : (
                         <>
                           <Send className="w-4 h-4 text-accent stroke-[2.5] relative z-30" />
-                          <span className="relative z-30 text-white font-extrabold uppercase tracking-wider text-sm drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+                          <span className="relative z-30 text-white keep-white font-extrabold uppercase tracking-wider text-sm drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
                             Submit Project Inquiry
                           </span>
                         </>

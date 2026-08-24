@@ -45,24 +45,24 @@ export default function ProjectsSection() {
                 onClick={() => setSelectedCategory(cat)}
                 className={`relative rounded-xl text-xs font-mono font-medium transition-all duration-300 overflow-hidden ${
                   isActive
-                    ? 'p-[2px] shadow-[0_2px_15px_rgba(0,251,27,0.35)]'
-                    : 'px-4 py-2 text-customText-secondary hover:text-white hover:bg-white/5'
+                    ? 'p-[2px] shadow-[0_2px_15px_rgba(14,165,233,0.35)]'
+                    : 'px-4 py-2 text-customText-secondary hover:text-accent hover:bg-sky-50'
                 }`}
               >
                 {isActive ? (
                   <>
                     <LiquidMetal
-                      colorBack="#042F0C"
-                      colorTint="#00FB1B"
+                      colorBack="#001F33"
+                      colorTint="#0EA5E9"
                       speed={0.8}
                       repetition={3}
                       distortion={0.25}
                       scale={1.2}
                       className="absolute inset-0 z-0 rounded-xl"
                     />
-                    <div className="relative z-10 px-4 py-1.5 rounded-xl bg-[#080C14] text-white font-extrabold flex items-center justify-center overflow-hidden">
+                    <div className="relative z-10 px-4 py-1.5 rounded-xl bg-[#0F172A] text-white keep-white font-extrabold flex items-center justify-center overflow-hidden">
                       <div className="pointer-events-none absolute inset-x-0 top-0 h-1/2 rounded-t-xl z-10 bg-gradient-to-b from-white/15 via-white/5 to-transparent" />
-                      <span className="relative z-30 text-white font-extrabold uppercase tracking-wider drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+                      <span className="relative z-30 text-white keep-white font-extrabold uppercase tracking-wider drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
                         {cat}
                       </span>
                     </div>
@@ -159,22 +159,22 @@ export default function ProjectsSection() {
                       href={project.liveUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="relative rounded-xl overflow-hidden p-[2px] shadow-[0_4px_16px_rgba(0,251,27,0.3)] hover:shadow-[0_6px_24px_rgba(0,251,27,0.55)] transition-all active:scale-95 group cursor-pointer"
+                      className="relative rounded-xl overflow-hidden p-[2px] shadow-[0_4px_16px_rgba(14,165,233,0.3)] hover:shadow-[0_6px_24px_rgba(14,165,233,0.55)] transition-all active:scale-95 group cursor-pointer"
                     >
                       <LiquidMetal
-                        colorBack="#042F0C"
-                        colorTint="#00FB1B"
+                        colorBack="#001F33"
+                        colorTint="#0EA5E9"
                         speed={0.8}
                         repetition={3}
                         distortion={0.25}
                         scale={1.2}
                         className="absolute inset-0 z-0 rounded-xl"
                       />
-                      <div className="relative z-10 px-4 py-2 rounded-xl bg-[#080C14] text-white flex items-center gap-1.5 overflow-hidden">
+                      <div className="relative z-10 px-4 py-2 rounded-xl bg-[#0F172A] text-white keep-white flex items-center gap-1.5 overflow-hidden">
                         <div className="pointer-events-none absolute inset-x-0 top-0 h-1/2 rounded-t-xl z-10 bg-gradient-to-b from-white/15 via-white/5 to-transparent" />
                         <div className="pointer-events-none absolute inset-0 rounded-xl z-10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),inset_0_-1px_2px_rgba(0,0,0,0.8)]" />
                         <ExternalLink className="w-3.5 h-3.5 text-accent stroke-[2.5] relative z-30" />
-                        <span className="relative z-30 text-white font-extrabold uppercase tracking-wider text-xs drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+                        <span className="relative z-30 text-white keep-white font-extrabold uppercase tracking-wider text-xs drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
                           Live Preview
                         </span>
                       </div>
@@ -271,22 +271,22 @@ export default function ProjectsSection() {
                     href={activeCaseStudy.liveUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="relative rounded-2xl overflow-hidden p-[2px] shadow-[0_4px_20px_rgba(0,251,27,0.35)] hover:shadow-[0_6px_28px_rgba(0,251,27,0.6)] transition-all active:scale-95 group cursor-pointer"
+                    className="relative rounded-2xl overflow-hidden p-[2px] shadow-[0_4px_20px_rgba(14,165,233,0.35)] hover:shadow-[0_6px_28px_rgba(14,165,233,0.6)] transition-all active:scale-95 group cursor-pointer"
                   >
                     <LiquidMetal
-                      colorBack="#042F0C"
-                      colorTint="#00FB1B"
+                      colorBack="#001F33"
+                      colorTint="#0EA5E9"
                       speed={0.8}
                       repetition={4}
                       distortion={0.3}
                       scale={1.2}
                       className="absolute inset-0 z-0 rounded-2xl"
                     />
-                    <div className="relative z-10 px-5 py-2.5 rounded-2xl bg-[#080C14] text-white flex items-center gap-2 overflow-hidden">
+                    <div className="relative z-10 px-5 py-2.5 rounded-2xl bg-[#0F172A] text-white keep-white flex items-center gap-2 overflow-hidden">
                       <div className="pointer-events-none absolute inset-x-0 top-0 h-1/2 rounded-t-2xl z-10 bg-gradient-to-b from-white/15 via-white/5 to-transparent" />
                       <div className="pointer-events-none absolute inset-0 rounded-2xl z-10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),inset_0_-1px_2px_rgba(0,0,0,0.8)]" />
                       <ExternalLink className="w-4 h-4 text-accent stroke-[2.5] relative z-30" />
-                      <span className="relative z-30 text-white font-extrabold uppercase tracking-wider text-xs drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+                      <span className="relative z-30 text-white keep-white font-extrabold uppercase tracking-wider text-xs drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
                         Launch Live Site
                       </span>
                     </div>
