@@ -1,0 +1,224 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-sans: 'Inter', sans-serif;
+    --font-display: 'Space Grotesk', sans-serif;
+  }
+
+  html {
+    color-scheme: dark;
+    background-color: #050505;
+    overflow-x: hidden !important;
+    max-width: 100vw;
+    width: 100%;
+    overscroll-behavior-y: none;
+  }
+
+  body {
+    @apply bg-dark-bg text-customText-primary antialiased selection:bg-accent selection:text-dark-bg transition-colors duration-300;
+    overflow-x: hidden !important;
+    max-width: 100vw;
+    width: 100%;
+    overscroll-behavior-y: none;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+}
+
+/* Lenis Ultra-Smooth Inertia Scroll Engine */
+html.lenis, html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+.lenis.lenis-smooth iframe {
+  pointer-events: none;
+}
+
+/* Light Mode Overrides */
+html.light {
+  color-scheme: light;
+  background-color: #F8FAFC;
+}
+
+html.light body {
+  background-color: #F8FAFC;
+  color: #0F172A;
+}
+
+html.light ::-webkit-scrollbar-track {
+  background: #F8FAFC;
+}
+
+html.light ::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border: 1px solid rgba(0, 251, 27, 0.3);
+}
+
+html.light ::-webkit-scrollbar-thumb:hover {
+  background: #00FB1B;
+}
+
+/* Background surfaces in Light Mode */
+html.light .bg-dark-bg {
+  background-color: #F8FAFC !important;
+}
+
+html.light .bg-dark-surface {
+  background-color: #FFFFFF !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+html.light .bg-dark-card {
+  background-color: #F1F5F9 !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Text colors in Light Mode */
+html.light .text-white:not(.keep-white) {
+  color: #0F172A !important;
+}
+
+html.light .text-customText-primary {
+  color: #0F172A !important;
+}
+
+html.light .text-customText-secondary {
+  color: #334155 !important;
+}
+
+html.light .text-customText-muted {
+  color: #64748B !important;
+}
+
+/* Neutral text colors in Light Mode */
+html.light .text-slate-300,
+html.light .text-zinc-300,
+html.light .text-gray-300,
+html.light .text-zinc-400,
+html.light .text-slate-400,
+html.light .text-gray-400 {
+  color: #475569 !important;
+}
+
+html.light .text-slate-200,
+html.light .text-zinc-200,
+html.light .text-gray-200 {
+  color: #1E293B !important;
+}
+
+/* Ensure text on green accent buttons stays pitch black */
+html.light .text-dark-bg {
+  color: #050505 !important;
+}
+
+html.light .bg-accent {
+  color: #050505 !important;
+}
+
+/* Border overrides in Light Mode */
+html.light .border-white\/5,
+html.light .border-white\/10,
+html.light .border-white\/15,
+html.light .border-white\/20,
+html.light .border-white\/30 {
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Background Opacity utility classes in Light Mode */
+html.light .bg-white\/5,
+html.light .bg-white\/10,
+html.light .bg-white\/20 {
+  background-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+html.light .hover\:bg-white\/5:hover,
+html.light .hover\:bg-white\/10:hover {
+  background-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+html.light .hover\:text-white:hover {
+  color: #000000 !important;
+}
+
+/* Gradient overrides for Light Mode */
+html.light .from-white {
+  --tw-gradient-from: #0F172A var(--tw-gradient-from-position) !important;
+  --tw-gradient-to: rgb(15 23 42 / 0) var(--tw-gradient-to-position) !important;
+  --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-from), var(--tw-gradient-to)) !important;
+}
+
+/* Dark Terminal Container Rule - keeps dark IDE / terminal boxes crisp with white code in Light Mode */
+html.light .dark-terminal {
+  background-color: #090D16 !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+html.light .dark-terminal .text-white,
+html.light .dark-terminal h1,
+html.light .dark-terminal h2,
+html.light .dark-terminal h3,
+html.light .dark-terminal h4,
+html.light .dark-terminal pre,
+html.light .dark-terminal code {
+  color: #FFFFFF !important;
+}
+
+html.light .dark-terminal .text-customText-secondary {
+  color: #94A3B8 !important;
+}
+
+html.light .dark-terminal .text-customText-muted {
+  color: #64748B !important;
+}
+
+html.light .dark-terminal .bg-dark-card,
+html.light .dark-terminal .bg-dark-bg {
+  background-color: #050505 !important;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #050505;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #262626;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 251, 27, 0.2);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #00FB1B;
+}
+
+/* Noise overlay utility */
+.noise-bg {
+  background-image: radial-gradient(rgba(0, 251, 27, 0.04) 1px, transparent 0);
+  background-size: 24px 24px;
+}
+
+/* Glassmorphism utility */
+.glass-panel {
+  background: rgba(10, 10, 10, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 251, 27, 0.15);
+}

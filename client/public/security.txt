@@ -1,0 +1,6 @@
+Contact: mailto:dharmik@tarasakadigital.com
+Expires: 2027-12-31T23:59:59.000Z
+Encryption: https://dharmiktarasaka.com/pgp-key.txt
+Preferred-Languages: en, hi, gu
+Canonical: https://dharmiktarasaka.com/.well-known/security.txt
+Policy: https://dharmiktarasaka.com/security-policy

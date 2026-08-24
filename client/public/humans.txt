@@ -1,0 +1,12 @@
+/* TEAM */
+  Developer: Dharmik Tarasaka
+  Role: Full Stack Web Developer & Automation Expert
+  Company: Tarasaka Digital Solutions
+  Site: https://dharmiktarasaka.com
+  Location: Surat, Gujarat, India
+
+/* SITE */
+  Last update: 2026/07/29
+  Standards: HTML5, CSS3, ES2024, TypeScript, JSON-LD
+  Components: Next.js 14 App Router, Tailwind CSS, Framer Motion, GSAP
+  Software: VS Code, Git, Docker, Node.js

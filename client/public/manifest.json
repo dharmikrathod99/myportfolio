@@ -1,0 +1,17 @@
+{
+  "name": "Dharmik Rathod | Software Engineer & MERN Stack Developer",
+  "short_name": "Dharmik Rathod",
+  "description": "Dharmik Rathod is a professional Software Engineer and MERN Stack Developer specializing in React, Node.js, Express, MongoDB, scalable web applications, modern UI/UX, API development, and cloud deployment.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#050505",
+  "theme_color": "#050505",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ]
+}

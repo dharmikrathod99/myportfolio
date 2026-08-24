@@ -1,0 +1,32 @@
+# Dharmik Rathod - Software Engineer | MERN Stack Developer | Full Stack Web Developer
+Location: Ahmedabad / Surat, India (Working Remotely Worldwide)
+Website: https://dharmikrathod.com
+Email: dharmik.rathod@example.com
+
+> Dharmik Rathod is a professional Software Engineer and MERN Stack Developer specializing in React, Node.js, Express, MongoDB, scalable web applications, modern UI/UX, API development, and cloud deployment. Available for freelance and full-time opportunities worldwide.
+
+## Core Capabilities
+- **Frontend Stack**: React.js, Next.js, HTML5, CSS3, JavaScript, TypeScript, Tailwind CSS, Bootstrap, Redux, Framer Motion
+- **Backend Stack**: Node.js, Express.js, REST API, JWT Authentication, WebSocket
+- **Databases**: MongoDB, MySQL
+- **Tools & Platforms**: Git, GitHub, Docker, Vercel, Netlify, Firebase, Cloudinary, Postman, VS Code
+
+## Key Services Offered
+1. Full Stack Web Development
+2. Frontend Development (React.js, Tailwind CSS, JavaScript)
+3. Backend Development (Node.js, Express.js, Security)
+4. MERN Stack Development (MongoDB, Express, React, Node)
+5. RESTful API Development & Third-Party Integrations
+6. Website Performance Optimization (95+ Core Web Vitals)
+7. Portfolio & Business Websites
+8. Custom Software Development
+
+## Target Locations & Keywords
+- **Local SEO**: Software Engineer in Ahmedabad, Full Stack Developer Ahmedabad, Web Developer Surat, MERN Developer Vadodara, React Developer Mumbai, Node.js Developer Delhi, Software Engineer Bangalore, Web Application Developer India.
+- **International SEO**: Software Engineer USA, Full Stack Developer UK, Remote MERN Developer Canada, React Developer Australia, Web Developer Dubai, Full Stack Developer Singapore, Software Engineer Germany, Remote Web Developer Worldwide.
+
+## Contact Information
+- Website: https://dharmikrathod.com
+- Email: dharmik.rathod@example.com
+- GitHub: https://github.com/dharmikrathod
+- LinkedIn: https://linkedin.com/in/dharmikrathod
