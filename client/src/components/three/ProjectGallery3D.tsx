@@ -4,10 +4,10 @@ import React, { useRef } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import { Float, Billboard, Text, RoundedBox } from '@react-three/drei';
-import { PORTFOLIO_DATA } from '@/data/portfolioData';
+import { PORTFOLIO_DATA, Project } from '@/data/portfolioData';
 
 function ProjectCard3D({ project, index, total }: {
-  project: { title: string; subtitle: string; category: string; tags: string[] };
+  project: Project;
   index: number;
   total: number;
 }) {
