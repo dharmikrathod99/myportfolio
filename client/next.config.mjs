@@ -2,6 +2,20 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
+  compress: true,
+  poweredByHeader: false,
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production',
+  },
+  experimental: {
+    optimizePackageImports: [
+      'lucide-react',
+      'framer-motion',
+      'three',
+      '@react-three/fiber',
+      '@react-three/drei',
+    ],
+  },
   transpilePackages: ['three', '@react-three/fiber', '@react-three/drei'],
   webpack: (config) => {
     // Suppress Three.js barrel export warnings
@@ -12,6 +26,8 @@ const nextConfig = {
     return config;
   },
   images: {
+    formats: ['image/avif', 'image/webp'],
+    minimumCacheTTL: 31536000,
     domains: ['images.unsplash.com', 'raw.githubusercontent.com', 'github.com', 'cloudinary.com', 'res.cloudinary.com'],
   },
   async headers() {
@@ -45,8 +61,27 @@ const nextConfig = {
           },
         ],
       },
+      {
+        source: '/myfaceopen.png',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      {
+        source: '/myfacecover.png',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
     ];
   },
 };
 
 export default nextConfig;
+

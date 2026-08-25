@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { ArrowUp, Terminal, Github, Linkedin, Twitter, Mail, MapPin, Clock, Send, ShieldCheck } from 'lucide-react';
 import { PORTFOLIO_DATA } from '@/data/portfolioData';
 
@@ -49,8 +50,14 @@ export default function Footer() {
           {/* Col 1 & 2: Brand Info */}
           <div className="lg:col-span-2 space-y-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary border border-white/10 flex items-center justify-center">
-                <Terminal className="w-5 h-5 text-accent" />
+              <div className="w-10 h-10 rounded-xl overflow-hidden bg-black/80 border border-white/15 flex items-center justify-center p-0.5 shadow-md">
+                <Image
+                  src="/main-logo.png"
+                  alt="DR.Developer Logo"
+                  width={40}
+                  height={40}
+                  className="w-full h-full object-cover rounded-lg"
+                />
               </div>
               <span className="font-display font-bold text-xl text-white flex items-center gap-0.5">
                 <span className="text-accent">DR.</span>Developer

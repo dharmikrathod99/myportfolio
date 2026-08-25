@@ -1,6 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import HeroSection from '@/components/sections/HeroSection';
+import MeasuredSection from '@/components/sections/MeasuredSection';
 import TestimonialsSection from '@/components/sections/TestimonialsSection';
 import {
   Sparkles,
@@ -115,7 +116,10 @@ export default function Home() {
       {/* 1. Main Hero Section */}
       <HeroSection />
 
-      {/* 2. Intro & Professional Bio Section */}
+      {/* 2. Measured Product Showcase Section (Fullscreen 100vh) */}
+      <MeasuredSection />
+
+      {/* 3. Intro & Professional Bio Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="p-8 sm:p-12 rounded-3xl bg-dark-card/60 border border-white/10 backdrop-blur-2xl relative overflow-hidden shadow-2xl">
           <div className="absolute -top-24 -right-24 w-96 h-96 bg-accent/10 rounded-full blur-[100px] pointer-events-none" />

@@ -14,7 +14,8 @@
     overflow-x: hidden !important;
     max-width: 100vw;
     width: 100%;
-    overscroll-behavior-y: none;
+    overscroll-behavior-x: none;
+    -webkit-overflow-scrolling: touch;
   }
 
   body {
@@ -22,7 +23,8 @@
     overflow-x: hidden !important;
     max-width: 100vw;
     width: 100%;
-    overscroll-behavior-y: none;
+    overscroll-behavior-x: none;
+    -webkit-overflow-scrolling: touch;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 }
@@ -49,78 +51,81 @@ html.lenis, html.lenis body {
 }
 
 /* ================= ☀️ LIGHT MODE SCOPED RULES ================= */
-html:not(.dark) .bg-dark-bg {
+html:not(.dark) .bg-dark-bg,
+html.light .bg-dark-bg {
   background-color: transparent !important;
 }
 
-html:not(.dark) .bg-dark-surface {
+html:not(.dark) [class*="bg-dark-surface"],
+html.light [class*="bg-dark-surface"] {
   background-color: rgba(255, 255, 255, 0.95) !important;
   backdrop-filter: blur(28px) !important;
   -webkit-backdrop-filter: blur(28px) !important;
-  border: 1px solid rgba(226, 232, 240, 0.9) !important;
+  border-color: rgba(226, 232, 240, 0.9) !important;
   box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05), 0 20px 25px -5px rgba(0, 0, 0, 0.03) !important;
 }
 
-html:not(.dark) .bg-dark-card {
-  background-color: rgba(255, 255, 255, 0.92) !important;
+html:not(.dark) [class*="bg-dark-card"],
+html.light [class*="bg-dark-card"] {
+  background-color: rgba(248, 250, 252, 0.95) !important;
   backdrop-filter: blur(24px) !important;
   -webkit-backdrop-filter: blur(24px) !important;
-  border: 1px solid rgba(226, 232, 240, 0.85) !important;
+  border-color: rgba(226, 232, 240, 0.85) !important;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04) !important;
 }
 
 /* Text Colors in Luxury Light Theme */
-html:not(.dark) .text-white:not(.keep-white):not(.dark-terminal *) {
+html:not(.dark) .text-white:not(.keep-white):not(.dark-terminal *),
+html.light .text-white:not(.keep-white):not(.dark-terminal *) {
   color: #0A0A0A !important;
 }
 
-html:not(.dark) .text-customText-primary {
+html:not(.dark) .text-customText-primary,
+html.light .text-customText-primary {
   color: #0A0A0A !important;
 }
 
-html:not(.dark) .text-customText-secondary {
+html:not(.dark) .text-customText-secondary,
+html.light .text-customText-secondary {
   color: #374151 !important;
 }
 
-html:not(.dark) .text-customText-muted {
+html:not(.dark) .text-customText-muted,
+html.light .text-customText-muted {
   color: #6B7280 !important;
-}
-
-html:not(.dark) .text-slate-300,
-html:not(.dark) .text-zinc-300,
-html:not(.dark) .text-gray-300,
-html:not(.dark) .text-zinc-400,
-html:not(.dark) .text-slate-400,
-html:not(.dark) .text-gray-400 {
-  color: #4B5563 !important;
-}
-
-html:not(.dark) .text-slate-200,
-html:not(.dark) .text-zinc-200,
-html:not(.dark) .text-gray-200 {
-  color: #111827 !important;
 }
 
 html:not(.dark) .border-white\/5,
 html:not(.dark) .border-white\/10,
 html:not(.dark) .border-white\/15,
 html:not(.dark) .border-white\/20,
-html:not(.dark) .border-white\/30 {
+html:not(.dark) .border-white\/30,
+html.light .border-white\/5,
+html.light .border-white\/10,
+html.light .border-white\/15,
+html.light .border-white\/20,
+html.light .border-white\/30 {
   border-color: rgba(226, 232, 240, 0.8) !important;
 }
 
 html:not(.dark) .bg-white\/5,
 html:not(.dark) .bg-white\/10,
-html:not(.dark) .bg-white\/20 {
+html:not(.dark) .bg-white\/20,
+html.light .bg-white\/5,
+html.light .bg-white\/10,
+html.light .bg-white\/20 {
   background-color: rgba(243, 244, 246, 0.8) !important;
 }
 
 html:not(.dark) .hover\:bg-white\/5:hover,
-html:not(.dark) .hover\:bg-white\/10:hover {
+html:not(.dark) .hover\:bg-white\/10:hover,
+html.light .hover\:bg-white\/5:hover,
+html.light .hover\:bg-white\/10:hover {
   background-color: rgba(235, 243, 255, 0.7) !important;
 }
 
-html:not(.dark) .hover\:text-white:hover {
+html:not(.dark) .hover\:text-white:hover,
+html.light .hover\:text-white:hover {
   color: #3A86FF !important;
 }
 
@@ -140,19 +145,19 @@ html.dark .bg-dark-bg {
   background-color: transparent !important;
 }
 
-html.dark .bg-dark-surface {
+html.dark [class*="bg-dark-surface"] {
   background-color: rgba(10, 15, 29, 0.82) !important;
   backdrop-filter: blur(28px) !important;
   -webkit-backdrop-filter: blur(28px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
   box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.9), 0 0 25px rgba(58, 134, 255, 0.12) !important;
 }
 
-html.dark .bg-dark-card {
+html.dark [class*="bg-dark-card"] {
   background-color: rgba(15, 23, 42, 0.76) !important;
   backdrop-filter: blur(24px) !important;
   -webkit-backdrop-filter: blur(24px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7) !important;
 }
 
@@ -309,4 +314,36 @@ html.dark .glass-panel {
   -webkit-backdrop-filter: blur(24px);
   border: 1px solid rgba(255, 255, 255, 0.14);
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7);
+}
+
+/* Liquid Glass Frosted Glassmorphism with Gradient Border Mask */
+.liquid-glass {
+  background: rgba(255, 255, 255, 0.01);
+  background-blend-mode: luminosity;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border: none;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.liquid-glass::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.4px;
+  background: linear-gradient(180deg,
+    rgba(255,255,255,0.45) 0%, rgba(255,255,255,0.15) 20%,
+    rgba(255,255,255,0) 40%, rgba(255,255,255,0) 60%,
+    rgba(255,255,255,0.15) 80%, rgba(255,255,255,0.45) 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.font-instrument {
+  font-family: 'Instrument Serif', Georgia, serif;
 }

@@ -113,9 +113,9 @@ export const metadata: Metadata = {
     siteName: 'DR.Developer Portfolio',
     images: [
       {
-        url: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1200&q=80',
+        url: '/main-logo.png',
         width: 1200,
-        height: 630,
+        height: 1200,
         alt: 'DR.Developer - Dharmik Rathod - Software Engineer & MERN Stack Developer',
       },
     ],
@@ -125,7 +125,7 @@ export const metadata: Metadata = {
     title: 'DR.Developer | Dharmik Rathod | Software Engineer & Full Stack MERN Developer',
     description: PORTFOLIO_DATA.personalInfo.bio,
     creator: '@dharmik_rathod',
-    images: ['https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1200&q=80'],
+    images: ['/main-logo.png'],
   },
   robots: {
     index: true,
@@ -140,9 +140,12 @@ export const metadata: Metadata = {
   },
   manifest: '/manifest.json',
   icons: {
-    icon: '/favicon.ico',
-    shortcut: '/favicon.ico',
-    apple: '/favicon.ico',
+    icon: [
+      { url: '/main-logo.png', sizes: 'any', type: 'image/png' },
+      { url: '/main-logo.png', sizes: '512x512', type: 'image/png' },
+    ],
+    shortcut: '/main-logo.png',
+    apple: '/main-logo.png',
   },
 };
 
@@ -166,6 +169,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${spaceGrotesk.variable} ${inter.variable} light`}>
       <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+        <link rel="icon" href="/main-logo.png" type="image/png" sizes="any" />
+        <link rel="apple-touch-icon" href="/main-logo.png" />
+        <link rel="preload" href="/main-logo.png" as="image" type="image/png" />
+        <link rel="preload" href="/myfaceopen.png" as="image" type="image/png" fetchPriority="high" />
+        <link rel="preload" href="/myfacecover.png" as="image" type="image/png" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(personSchema) }}

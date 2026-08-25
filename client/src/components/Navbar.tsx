@@ -2,14 +2,16 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Terminal, Search, Menu, X, ArrowUpRight, Sparkles, ChevronRight, Sun, Moon, Box, Monitor } from 'lucide-react';
+import { Menu, X, ArrowUpRight, ChevronRight, Sun, Moon, Box, Monitor } from 'lucide-react';
 import { LiquidMetal, BorderBeam } from '@/components/ui/animate-ui';
+import { FramerTerminalIcon, FramerSparklesIcon } from '@/components/ui/icons/PremiumIcons';
 import { useTheme } from '@/context/ThemeContext';
 import { cn } from '@/lib/utils';
 
-export default function Navbar({ onOpenPalette }: { onOpenPalette: () => void }) {
+export default function Navbar({ onOpenPalette }: { onOpenPalette?: () => void }) {
   const [isHovered, setIsHovered] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -100,14 +102,21 @@ export default function Navbar({ onOpenPalette }: { onOpenPalette: () => void })
           {/* Brand & Pulsing Status Dot */}
           <Link href="/" className="flex items-center gap-2 sm:gap-2.5 group shrink-0">
             <div className={cn(
-              "relative w-8 h-8 rounded-full flex items-center justify-center transition-all shadow-md border backdrop-blur-md",
+              "relative w-8 h-8 sm:w-9 sm:h-9 rounded-full overflow-hidden flex items-center justify-center transition-all shadow-md border backdrop-blur-md p-0.5",
               isLight
-                ? "bg-white/90 border-slate-200 group-hover:border-[#3A86FF] shadow-sm"
-                : "bg-white/5 border-white/10 group-hover:border-accent"
+                ? "bg-slate-900 border-slate-200 group-hover:border-[#3A86FF] shadow-sm"
+                : "bg-black/90 border-[#3A86FF]/30 group-hover:border-accent"
             )}>
-              <Terminal className="w-4 h-4 text-accent group-hover:scale-110 transition-transform" />
-              <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-accent animate-ping" />
-              <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-accent" />
+              <Image
+                src="/main-logo.png"
+                alt="DR.Developer Logo"
+                width={36}
+                height={36}
+                className="w-full h-full object-cover rounded-full group-hover:scale-110 transition-transform duration-300"
+                priority
+              />
+              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-accent animate-ping" />
+              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-accent" />
             </div>
 
             {/* Dynamic Label */}
@@ -217,26 +226,6 @@ export default function Navbar({ onOpenPalette }: { onOpenPalette: () => void })
               </div>
             </button>
 
-            {/* Command Search Trigger */}
-            <button
-              onClick={onOpenPalette}
-              title="Search Commands (Ctrl+K)"
-              className={cn(
-                "px-2.5 py-1.5 rounded-full border transition-all active:scale-95 cursor-pointer flex items-center gap-1.5 shadow-sm",
-                isLight
-                  ? "bg-slate-100 border-slate-200 text-slate-900 hover:text-accent"
-                  : "bg-white/5 border-white/10 text-customText-secondary hover:text-white hover:border-white/25 hover:bg-white/10"
-              )}
-            >
-              <Search className="w-3.5 h-3.5" />
-              <kbd className={cn(
-                "hidden lg:inline text-[9px] font-mono border rounded px-1",
-                isLight ? "bg-white border-slate-300 text-slate-800 font-bold" : "bg-white/5 border-white/10 text-customText-secondary"
-              )}>
-                ⌘K
-              </kbd>
-            </button>
-
             {/* Desktop Liquid Metal Border Hire Me CTA */}
             <Link
               href="/contact"
@@ -299,8 +288,8 @@ export default function Navbar({ onOpenPalette }: { onOpenPalette: () => void })
             >
               {/* Header inside mobile overlay */}
               <div className="flex items-center justify-between px-1 pb-1">
-                <span className="text-[10px] font-mono text-accent uppercase tracking-wider flex items-center gap-1 font-bold">
-                  <Sparkles className="w-3 h-3" /> Navigation Menu
+                <span className="text-[10px] font-mono text-accent uppercase tracking-wider flex items-center gap-1.5 font-bold">
+                  <FramerSparklesIcon className="w-3.5 h-3.5 text-accent" /> Navigation Menu
                 </span>
                 <button
                   onClick={() => setIsMobileOpen(false)}

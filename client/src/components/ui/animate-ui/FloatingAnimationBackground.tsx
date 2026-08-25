@@ -231,12 +231,12 @@ export function FloatingAnimationBackground({
     const parsedColors = colorStops.map((c, i) => parseHexColor(c, defaultColors[i] || [1, 0, 0]));
     const flatColors = new Float32Array(parsedColors.flat());
 
-    // Ultra HD 4K Resize logic with high DPR
+    // High performance background DPR scaling
     const handleResize = () => {
       if (!container || !canvas) return;
       const width = container.offsetWidth || window.innerWidth;
       const height = container.offsetHeight || window.innerHeight;
-      const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+      const dpr = Math.min(window.devicePixelRatio || 1, 1.0);
 
       canvas.width = Math.floor(width * dpr);
       canvas.height = Math.floor(height * dpr);
@@ -254,10 +254,15 @@ export function FloatingAnimationBackground({
     resizeObserver.observe(container);
     handleResize();
 
-    let animationFrameId: number;
+    let animationFrameId: number | null = null;
     const startTime = performance.now();
+    let isPageVisible = !document.hidden;
 
     const render = (time: number) => {
+      if (!isPageVisible) {
+        animationFrameId = null;
+        return;
+      }
       const elapsed = (time - startTime) * 0.001 * speed;
       gl.useProgram(program);
       gl.uniform1f(uTimeLoc, elapsed);
@@ -270,10 +275,28 @@ export function FloatingAnimationBackground({
       animationFrameId = requestAnimationFrame(render);
     };
 
-    animationFrameId = requestAnimationFrame(render);
+    const startRendering = () => {
+      if (!animationFrameId && isPageVisible) {
+        animationFrameId = requestAnimationFrame(render);
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      isPageVisible = !document.hidden;
+      if (isPageVisible) {
+        startRendering();
+      } else if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    startRendering();
 
     return () => {
-      cancelAnimationFrame(animationFrameId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
       resizeObserver.disconnect();
       gl.deleteProgram(program);
       gl.deleteShader(vertShader);

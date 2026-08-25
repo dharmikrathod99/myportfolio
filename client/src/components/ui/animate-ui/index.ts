@@ -5,3 +5,4 @@ export { Marquee } from './Marquee';
 export { HexagonBackground } from './HexagonBackground';
 export { FloatingAnimationBackground } from './FloatingAnimationBackground';
 export { LiquidMetal, LiquidMetalButton } from './liquid-metal';
+export { ProTextType } from './ProTextType';
