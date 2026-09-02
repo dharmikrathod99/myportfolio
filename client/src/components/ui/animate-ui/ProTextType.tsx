@@ -190,12 +190,12 @@ export function ProTextType({
   return (
     <Component
       ref={containerRef}
-      className={cn('inline-flex items-center flex-wrap whitespace-pre-wrap', className)}
+      className={cn('inline-flex items-center whitespace-nowrap', className)}
       style={style}
       {...rest}
     >
       <span
-        className="text-type__content"
+        className="text-type__content whitespace-nowrap"
         style={{ color: getCurrentTextColor() }}
       >
         {displayedText}

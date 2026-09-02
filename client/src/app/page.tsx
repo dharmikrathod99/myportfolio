@@ -1,8 +1,28 @@
 import React from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import HeroSection from '@/components/sections/HeroSection';
-import MeasuredSection from '@/components/sections/MeasuredSection';
-import TestimonialsSection from '@/components/sections/TestimonialsSection';
+
+const MeasuredSection = dynamic(() => import('@/components/sections/MeasuredSection'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-[75vh] sm:h-[85vh] lg:h-screen min-h-[480px] bg-[#0a0a0a] flex items-center justify-center">
+      <div className="w-8 h-8 rounded-full border-2 border-accent/40 border-t-accent animate-spin" />
+    </div>
+  ),
+});
+
+const TestimonialsSection = dynamic(() => import('@/components/sections/TestimonialsSection'), {
+  ssr: false,
+});
+
+const ProjectsCarouselSection = dynamic(() => import('@/components/sections/ProjectsCarouselSection'), {
+  ssr: false,
+});
+
+const AboutSection = dynamic(() => import('@/components/sections/AboutSection'), {
+  ssr: false,
+});
 import {
   Sparkles,
   CheckCircle2,
@@ -112,49 +132,28 @@ export default function Home() {
   ];
 
   return (
-    <div className="relative z-10 space-y-24 overflow-x-hidden w-full pb-16">
+    <div className="relative z-10 overflow-x-hidden w-full pb-16">
       {/* 1. Main Hero Section */}
       <HeroSection />
 
       {/* 2. Measured Product Showcase Section (Fullscreen 100vh) */}
       <MeasuredSection />
 
-      {/* 3. Intro & Professional Bio Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="p-8 sm:p-12 rounded-3xl bg-dark-card/60 border border-white/10 backdrop-blur-2xl relative overflow-hidden shadow-2xl">
-          <div className="absolute -top-24 -right-24 w-96 h-96 bg-accent/10 rounded-full blur-[100px] pointer-events-none" />
+      {/* 3. Featured Video Projects Showcase - Directly Attached with Zero Gap */}
+      <ProjectsCarouselSection />
 
-          <div className="relative z-10 space-y-6 max-w-4xl">
-            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/20 text-xs font-mono text-accent font-bold">
-              <Sparkles className="w-3.5 h-3.5" /> Full Stack MERN & AI Engineer
-            </span>
-            <h2 className="text-3xl sm:text-5xl font-display font-extrabold text-white tracking-tight leading-tight">
-              Building <span className="bg-gradient-to-r from-accent via-[#38BDF8] to-white bg-clip-text text-transparent">AI-Powered Web Applications</span> That Drive Business Growth
-            </h2>
-            
-            <p className="text-base sm:text-lg text-customText-primary leading-relaxed">
-              Hi, I'm <strong className="text-white font-bold">Dharmik Rathod</strong> (known as <strong className="text-accent font-bold">DR.Developer</strong>), a passionate <strong className="text-accent">Software Engineer</strong> and <strong className="text-white font-bold">Full Stack MERN Developer</strong> based in <strong className="text-white font-bold">Ahmedabad, Gujarat, India</strong>. I specialize in designing and developing modern, scalable, and SEO-optimized web applications for startups, businesses, and entrepreneurs worldwide.
-            </p>
+      {/* 4. About DR.Developer Section (Left: About Me, Right: Photo Reveal Transformation Effect) */}
+      <AboutSection />
 
-            <p className="text-sm sm:text-base text-customText-secondary leading-relaxed">
-              I build high-performance websites, scrolling effect websites, AI-powered applications, SaaS platforms, custom business software, automation systems, and intelligent web solutions that combine outstanding user experience with clean architecture, fast performance, and strong search engine visibility.
-            </p>
-
-            <p className="text-sm sm:text-base text-customText-secondary leading-relaxed">
-              Whether you need a professional portfolio website, business website, eCommerce platform, admin dashboard, AI chatbot, automation system, or a complete enterprise application, I can transform your ideas into secure, scalable, and production-ready software.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* 3. Professional Full Stack Developer & AI Engineer (Focus Areas Grid) */}
+      <div className="space-y-24 pt-12">
+        {/* 5. Professional Full Stack Developer & AI Engineer (Focus Areas Grid) */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-3xl mx-auto mb-12">
           <span className="text-xs font-mono text-accent uppercase tracking-widest px-3 py-1 rounded-full bg-accent/10 border border-accent/20 inline-flex items-center gap-1.5 font-bold mb-4">
             <Cpu className="w-3.5 h-3.5" /> Development Expertise
           </span>
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-display font-extrabold text-white tracking-tight">
-            Professional <span className="bg-gradient-to-r from-accent via-[#38BDF8] to-white bg-clip-text text-transparent">Full Stack & AI Focus</span>
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-display font-extrabold text-white tracking-tight leading-[1.2] sm:leading-[1.2]">
+            Professional <span className="bg-gradient-to-r from-accent via-[#38BDF8] to-white bg-clip-text text-transparent inline-block">Full Stack & AI Focus</span>
           </h2>
           <p className="mt-4 text-sm sm:text-base text-customText-secondary">
             With expertise in React.js, Node.js, Express.js, MongoDB, TypeScript, AI APIs, and Cloud Deployment, every project is built for speed, security, and scalability.
@@ -184,8 +183,8 @@ export default function Home() {
           <span className="text-xs font-mono text-accent uppercase tracking-widest px-3 py-1 rounded-full bg-accent/10 border border-accent/20 inline-flex items-center gap-1.5 font-bold mb-4">
             <Building2 className="w-3.5 h-3.5" /> Business Solutions
           </span>
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-display font-extrabold text-white tracking-tight">
-            Helping Businesses <span className="bg-gradient-to-r from-accent via-[#38BDF8] to-white bg-clip-text text-transparent">Build Faster, Smarter & Better</span>
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-display font-extrabold text-white tracking-tight leading-[1.2] sm:leading-[1.2]">
+            Helping Businesses <span className="bg-gradient-to-r from-accent via-[#38BDF8] to-white bg-clip-text text-transparent inline-block">Build Faster, Smarter & Better</span>
           </h2>
           <p className="mt-4 text-sm sm:text-base text-customText-secondary">
             Today's businesses need digital products that generate leads, improve customer experience, and automate workflows.
@@ -217,7 +216,7 @@ export default function Home() {
             <span className="text-xs font-mono text-accent uppercase tracking-widest px-3 py-1 rounded-full bg-accent/10 border border-accent/20 inline-flex items-center gap-1.5 font-bold mb-3">
               <ShieldCheck className="w-3.5 h-3.5" /> Value Assurance
             </span>
-            <h2 className="text-3xl sm:text-4xl font-display font-extrabold text-white tracking-tight">
+            <h2 className="text-3xl sm:text-4xl font-display font-extrabold text-white tracking-tight leading-[1.2]">
               Why Work With Me?
             </h2>
             <p className="mt-2 text-sm sm:text-base text-customText-secondary">
@@ -249,8 +248,8 @@ export default function Home() {
           <span className="text-xs font-mono text-accent uppercase tracking-widest px-3 py-1 rounded-full bg-accent/10 border border-accent/20 inline-flex items-center gap-1.5 font-bold mb-4">
             <Layers className="w-3.5 h-3.5" /> Modern Stack Matrix
           </span>
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-display font-extrabold text-white tracking-tight">
-            Technologies <span className="bg-gradient-to-r from-accent via-[#38BDF8] to-white bg-clip-text text-transparent">I Work With</span>
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-display font-extrabold text-white tracking-tight leading-[1.2] sm:leading-[1.2]">
+            Technologies <span className="bg-gradient-to-r from-accent via-[#38BDF8] to-white bg-clip-text text-transparent inline-block">I Work With</span>
           </h2>
         </div>
 
@@ -291,7 +290,7 @@ export default function Home() {
             <span className="text-xs font-mono text-accent uppercase tracking-widest px-3 py-1 rounded-full bg-accent/10 border border-accent/20 inline-flex items-center gap-1.5 font-bold mb-3">
               <Globe2 className="w-3.5 h-3.5" /> Geographic Reach
             </span>
-            <h2 className="text-3xl sm:text-4xl font-display font-extrabold text-white tracking-tight">
+            <h2 className="text-3xl sm:text-4xl font-display font-extrabold text-white tracking-tight leading-[1.2]">
               Serving Clients Across <span className="text-accent">India & Worldwide</span>
             </h2>
             <p className="mt-2 text-sm sm:text-base text-customText-secondary">
@@ -373,8 +372,8 @@ export default function Home() {
             <span className="text-xs font-mono text-accent uppercase tracking-widest px-3 py-1 rounded-full bg-accent/10 border border-accent/20 inline-flex items-center gap-1.5 font-bold">
               <Rocket className="w-3.5 h-3.5" /> Start Your Project
             </span>
-            <h2 className="text-3xl sm:text-5xl font-display font-extrabold text-white tracking-tight">
-              Let's Build Something <span className="bg-gradient-to-r from-accent via-[#38BDF8] to-white bg-clip-text text-transparent">Extraordinary</span>
+            <h2 className="text-3xl sm:text-5xl font-display font-extrabold text-white tracking-tight leading-[1.2]">
+              Let's Build Something <span className="bg-gradient-to-r from-accent via-[#38BDF8] to-white bg-clip-text text-transparent inline-block">Extraordinary</span>
             </h2>
             <p className="text-sm sm:text-base text-customText-secondary leading-relaxed">
               If you're looking for a professional <strong className="text-white">AI Software Engineer</strong>, <strong className="text-white">Full Stack MERN Developer</strong>, or <strong className="text-white">Custom Software Developer</strong> who can build modern, scalable, and SEO-optimized digital products, I'd love to help.
@@ -433,6 +432,7 @@ export default function Home() {
           </div>
         </div>
       </section>
+      </div>
     </div>
   );
 }

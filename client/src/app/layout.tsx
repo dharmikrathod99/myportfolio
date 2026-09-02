@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
-import { Space_Grotesk, Inter } from 'next/font/google';
+import { Space_Grotesk, Inter, Instrument_Serif } from 'next/font/google';
 import './globals.css';
+import ClientShell from '@/components/ClientShell';
 import { PORTFOLIO_DATA } from '@/data/portfolioData';
 import { ThemeProvider } from '@/context/ThemeContext';
 import {
@@ -21,6 +22,13 @@ const spaceGrotesk = Space_Grotesk({
 const inter = Inter({
   subsets: ['latin'],
   variable: '--font-sans',
+  display: 'swap',
+});
+
+const instrumentSerif = Instrument_Serif({
+  weight: '400',
+  subsets: ['latin'],
+  variable: '--font-instrument',
   display: 'swap',
 });
 
@@ -156,8 +164,6 @@ export const viewport: Viewport = {
   maximumScale: 5,
 };
 
-import ClientShell from '@/components/ClientShell';
-
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const personSchema = getPersonSchema();
   const orgSchema = getOrganizationSchema();
@@ -167,16 +173,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const servicesSchema = getServicesSchema();
 
   return (
-    <html lang="en" className={`${spaceGrotesk.variable} ${inter.variable} light`}>
+    <html lang="en" className={`${spaceGrotesk.variable} ${inter.variable} ${instrumentSerif.variable} light`}>
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
         <link rel="icon" href="/main-logo.png" type="image/png" sizes="any" />
         <link rel="apple-touch-icon" href="/main-logo.png" />
-        <link rel="preload" href="/main-logo.png" as="image" type="image/png" />
-        <link rel="preload" href="/myfaceopen.png" as="image" type="image/png" fetchPriority="high" />
-        <link rel="preload" href="/myfacecover.png" as="image" type="image/png" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(personSchema) }}

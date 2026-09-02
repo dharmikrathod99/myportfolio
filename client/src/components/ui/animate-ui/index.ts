@@ -6,3 +6,7 @@ export { HexagonBackground } from './HexagonBackground';
 export { FloatingAnimationBackground } from './FloatingAnimationBackground';
 export { LiquidMetal, LiquidMetalButton } from './liquid-metal';
 export { ProTextType } from './ProTextType';
+export { DepthBlurCarousel } from './DepthBlurCarousel';
+export { StarBurst } from './StarBurst';
+export { SpecterOrb } from './SpecterOrb';
+export { AIAvatarHero } from '../AIAvatarHero';

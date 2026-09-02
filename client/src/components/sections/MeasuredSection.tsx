@@ -14,7 +14,9 @@ const OVERLAY_IMAGE =
 export default function MeasuredSection() {
   const sectionRef = useRef<HTMLDivElement>(null);
   const videoMaskRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const gridRef = useRef<SVGSVGElement>(null);
+  const isVisible = useRef(false);
 
   // Target and smoothed cursor coordinates
   const targetPos = useRef({ x: 0, y: 0 });
@@ -66,10 +68,12 @@ export default function MeasuredSection() {
     section.addEventListener('touchmove', handleTouchMove, { passive: true });
     section.addEventListener('mouseleave', handleMouseLeave);
 
-    let animId: number;
+    let animId: number | null = null;
     let autoTime = 0;
 
     const renderLoop = () => {
+      if (!isVisible.current) return;
+
       const now = performance.now();
       const currentRect = section.getBoundingClientRect();
       const width = currentRect.width || 800;
@@ -80,7 +84,6 @@ export default function MeasuredSection() {
 
       if (isIdle) {
         autoTime += 0.02;
-        // Organic parametric sweep across the characters (Catbus, Totoro, Spirit)
         const autoX =
           width * 0.5 +
           Math.sin(autoTime * 0.75) * (width * 0.28) +
@@ -97,7 +100,7 @@ export default function MeasuredSection() {
       currentPos.current.x += (targetPos.current.x - currentPos.current.x) * 0.09;
       currentPos.current.y += (targetPos.current.y - currentPos.current.y) * 0.09;
 
-      // Parallax Grid Offset (0.06 factor)
+      // Parallax Grid Offset
       const normX = (currentPos.current.x - width / 2) / (width / 2 || 1);
       const normY = (currentPos.current.y - height / 2) / (height / 2 || 1);
       gridOffset.current.x += (normX * 16 - gridOffset.current.x) * 0.06;
@@ -107,7 +110,7 @@ export default function MeasuredSection() {
         gridRef.current.style.transform = `translate3d(${gridOffset.current.x}px, ${gridOffset.current.y}px, 0)`;
       }
 
-      // Responsive spotlight radius (140px on mobile -> 260px on desktop)
+      // Responsive spotlight radius
       const spotlightRadius = Math.round(Math.min(Math.max(width * 0.36, 130), 260));
 
       // Update radial mask on video
@@ -120,10 +123,30 @@ export default function MeasuredSection() {
       animId = requestAnimationFrame(renderLoop);
     };
 
-    animId = requestAnimationFrame(renderLoop);
+    // IntersectionObserver to pause rendering and video when offscreen
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        const inView = entry.isIntersecting;
+        isVisible.current = inView;
+        if (inView) {
+          videoRef.current?.play().catch(() => {});
+          if (!animId) animId = requestAnimationFrame(renderLoop);
+        } else {
+          videoRef.current?.pause();
+          if (animId) {
+            cancelAnimationFrame(animId);
+            animId = null;
+          }
+        }
+      },
+      { threshold: 0.05 }
+    );
+
+    observer.observe(section);
 
     return () => {
-      cancelAnimationFrame(animId);
+      observer.disconnect();
+      if (animId) cancelAnimationFrame(animId);
       section.removeEventListener('mousemove', handleMouseMove);
       section.removeEventListener('touchstart', handleTouchMove);
       section.removeEventListener('touchmove', handleTouchMove);
@@ -162,42 +185,45 @@ export default function MeasuredSection() {
         }}
       />
 
-      {/* ================= LAYER 3: HERO TEXT (z-20) ================= */}
-      <div className="absolute inset-x-0 top-5 sm:top-10 md:top-16 z-20 flex flex-col items-center justify-center pointer-events-none text-center px-3">
-        <span className="text-[8px] xs:text-[9px] sm:text-xs font-mono tracking-[0.25em] sm:tracking-[0.3em] uppercase text-white/70 mb-1 sm:mb-2 drop-shadow-md">
+      {/* ================= LAYER 3: HERO TEXT (z-[15]: BEHIND GLASS JAR) ================= */}
+      <div className="absolute inset-x-0 top-5 sm:top-10 md:top-16 z-[15] flex flex-col items-center justify-center pointer-events-none text-center px-3 overflow-visible pb-2">
+        <span className="text-[8px] xs:text-[9px] sm:text-xs font-mono tracking-[0.25em] sm:tracking-[0.3em] uppercase text-white/80 keep-white mb-1 sm:mb-2 drop-shadow-md" style={{ color: 'rgba(255, 255, 255, 0.8)' }}>
           Full Stack MERN & AI Software Engineer
         </span>
-        <h2 className="font-instrument text-[2.6rem] xs:text-[3.4rem] sm:text-[6rem] md:text-[8.8rem] lg:text-[12rem] xl:text-[15rem] leading-[0.88] text-white tracking-tight drop-shadow-[0_12px_40px_rgba(0,0,0,0.95)] select-none whitespace-nowrap">
+        <h2
+          className="font-instrument text-[2.6rem] xs:text-[3.4rem] sm:text-[6rem] md:text-[8.8rem] lg:text-[12rem] xl:text-[15rem] leading-[0.92] text-white keep-white tracking-tight drop-shadow-[0_12px_40px_rgba(0,0,0,0.95)] select-none whitespace-nowrap overflow-visible"
+          style={{ color: '#ffffff' }}
+        >
           DR. DEVELOPER
         </h2>
       </div>
 
-      {/* ================= LAYER 4: OVERLAY IMAGE (z-25) ================= */}
+      {/* ================= LAYER 4: GLASS JAR FOREGROUND (z-[25]: IN FRONT OF TEXT) ================= */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={OVERLAY_IMAGE}
-        alt="Atmospheric Depth Overlay"
-        className="absolute inset-0 w-full h-full object-cover pointer-events-none z-25 opacity-90 mix-blend-screen"
+        src="/terrarium-foreground.webp"
+        alt="Glass Jar Foreground"
+        className="absolute inset-0 w-full h-full object-cover object-[center_top_15%] sm:object-center pointer-events-none z-[25]"
       />
 
       {/* ================= LAYER 5: SPOTLIGHT REVEAL VIDEO (z-30) ================= */}
-      {/* Clipped to the bottom 62% of viewport, revealed via cursor/auto radial mask */}
+      {/* Revealed via smooth cursor/auto radial mask without hard cutoff lines */}
       <div
         ref={videoMaskRef}
-        className="absolute inset-0 z-30 pointer-events-none will-change-[mask-image] overflow-hidden"
+        className="absolute inset-0 z-30 pointer-events-none will-change-[mask-image] overflow-hidden mix-blend-screen"
         style={{
-          clipPath: 'inset(38% 0 0 0)',
           WebkitMaskRepeat: 'no-repeat',
           maskRepeat: 'no-repeat',
         }}
       >
         <video
+          ref={videoRef}
           src={FRONT_VIDEO}
-          autoPlay
+          preload="none"
           loop
           muted
           playsInline
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover object-[center_top_15%] sm:object-center"
         />
       </div>
 

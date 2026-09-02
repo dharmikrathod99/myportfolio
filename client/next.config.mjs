@@ -18,7 +18,6 @@ const nextConfig = {
   },
   transpilePackages: ['three', '@react-three/fiber', '@react-three/drei'],
   webpack: (config) => {
-    // Suppress Three.js barrel export warnings
     config.module.rules.push({
       test: /three\/examples\/jsm/,
       sideEffects: false,
@@ -28,7 +27,13 @@ const nextConfig = {
   images: {
     formats: ['image/avif', 'image/webp'],
     minimumCacheTTL: 31536000,
-    domains: ['images.unsplash.com', 'raw.githubusercontent.com', 'github.com', 'cloudinary.com', 'res.cloudinary.com'],
+    remotePatterns: [
+      { protocol: 'https', hostname: 'images.unsplash.com' },
+      { protocol: 'https', hostname: 'raw.githubusercontent.com' },
+      { protocol: 'https', hostname: 'github.com' },
+      { protocol: 'https', hostname: 'cloudinary.com' },
+      { protocol: 'https', hostname: 'res.cloudinary.com' },
+    ],
   },
   async headers() {
     return [
@@ -84,4 +89,3 @@ const nextConfig = {
 };
 
 export default nextConfig;
-

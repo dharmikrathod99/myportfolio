@@ -75,9 +75,18 @@ html.light [class*="bg-dark-card"] {
 }
 
 /* Text Colors in Luxury Light Theme */
-html:not(.dark) .text-white:not(.keep-white):not(.dark-terminal *),
-html.light .text-white:not(.keep-white):not(.dark-terminal *) {
+html:not(.dark) .text-white:not(.keep-white):not(.dark-terminal *):not(#measured-experience *):not(.depth-card *):not(.depth-card):not(#projects-showcase *):not(#projects-showcase),
+html.light .text-white:not(.keep-white):not(.dark-terminal *):not(#measured-experience *):not(.depth-card *):not(.depth-card):not(#projects-showcase *):not(#projects-showcase) {
   color: #0A0A0A !important;
+}
+
+/* Force pure white text inside dark video showcase in any theme */
+#projects-showcase .text-white,
+#projects-showcase h2,
+#projects-showcase h3,
+#projects-showcase p,
+#projects-showcase span {
+  color: #FFFFFF;
 }
 
 html:not(.dark) .text-customText-primary,
@@ -345,5 +354,57 @@ html.dark .glass-panel {
 }
 
 .font-instrument {
-  font-family: 'Instrument Serif', Georgia, serif;
+  font-family: var(--font-instrument), 'Instrument Serif', Georgia, serif;
 }
+
+/* ================= 🎬 CREATIVE VIDEO SHOWCASE UTILITIES ================= */
+.btn-fill-up {
+  position: relative;
+  overflow: hidden;
+  transition: color 0.4s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 1;
+}
+
+.btn-fill-up::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-color: var(--btn-accent, #F598F2);
+  transform: translateY(101%);
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: -1;
+  border-radius: inherit;
+}
+
+.btn-fill-up:hover::before {
+  transform: translateY(0%);
+}
+
+.btn-fill-up:hover {
+  color: #000000 !important;
+  border-color: var(--btn-accent, #F598F2) !important;
+}
+
+.role-link {
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+}
+
+.role-link:hover {
+  transform: translateX(4px);
+}
+
+@keyframes dotPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.45;
+    transform: scale(1.45);
+  }
+}
+
+.animate-dot-pulse {
+  animation: dotPulse 1.6s infinite ease-in-out;
+}
+

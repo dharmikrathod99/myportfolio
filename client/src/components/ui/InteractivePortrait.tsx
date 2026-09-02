@@ -289,13 +289,12 @@ export function InteractivePortrait({
       // Update geometries helper — ensures zero cropping of hair or shoulders on any screen
       const updateImageGeometries = (img: any) => {
         if (!img || !baseImage || !revealImage) return;
-        // Fit completely inside container with safe padding
-        const safeMargin = 0.96;
-        const scale = Math.min((width * safeMargin) / img.width, (height * safeMargin) / img.height);
+        // Fit completely inside container and align flush to the bottom
+        const scale = Math.min(width / img.width, height / img.height);
         const planeWidth = img.width * scale;
         const planeHeight = img.height * scale;
 
-        // Position bottom-aligned inside container
+        // Position flush to bottom inside container
         const posY = -(height - planeHeight) / 2;
 
         baseImage.geometry.dispose();

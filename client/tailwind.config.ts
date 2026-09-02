@@ -29,11 +29,11 @@ const config: Config = {
           muted: 'rgba(58, 134, 255, 0.12)',
         },
         dark: {
-          bg: '#05050A',
-          surface: '#0B0F19',
-          card: '#111827',
-          border: '#1F2937',
-          muted: '#6B7280',
+          bg: '#0F1422',
+          surface: '#141B2D',
+          card: '#182138',
+          border: '#24304D',
+          muted: '#8899B8',
         },
         customText: {
           primary: '#0A0A0A',       // Luxury Crisp Black
