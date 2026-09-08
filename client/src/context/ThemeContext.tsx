@@ -11,6 +11,8 @@ interface ThemeContextType {
   siteMode: SiteMode;
   isTransitioning: boolean;
   transformSite: () => void;
+  isSiteLoading: boolean;
+  setIsSiteLoading: (loading: boolean) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -19,6 +21,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>('light');
   const [siteMode, setSiteMode] = useState<SiteMode>('2d');
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [isSiteLoading, setIsSiteLoading] = useState(true);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('portfolio-theme') as Theme | null;
@@ -82,7 +85,17 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, [isTransitioning, siteMode, theme]);
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, siteMode, isTransitioning, transformSite }}>
+    <ThemeContext.Provider
+      value={{
+        theme,
+        toggleTheme,
+        siteMode,
+        isTransitioning,
+        transformSite,
+        isSiteLoading,
+        setIsSiteLoading,
+      }}
+    >
       {children}
     </ThemeContext.Provider>
   );

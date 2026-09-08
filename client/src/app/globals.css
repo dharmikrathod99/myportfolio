@@ -408,3 +408,64 @@ html.dark .glass-panel {
   animation: dotPulse 1.6s infinite ease-in-out;
 }
 
+/* ================= ⚡ CYBERPUNK SERVER CRASH & SCREEN SHAKE ANIMATIONS ================= */
+@keyframes catastrophic-shake {
+  0% { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
+  10% { transform: translate3d(-18px, -14px, 0) rotate(-2deg) scale(1.02); }
+  20% { transform: translate3d(16px, 14px, 0) rotate(1.8deg) scale(1.01); }
+  30% { transform: translate3d(-22px, 12px, 0) rotate(-2.4deg) scale(1.03); }
+  40% { transform: translate3d(18px, -16px, 0) rotate(2deg) scale(1.02); }
+  50% { transform: translate3d(-24px, -18px, 0) rotate(-2.8deg) scale(1.04); }
+  60% { transform: translate3d(22px, 16px, 0) rotate(2.4deg) scale(1.03); }
+  70% { transform: translate3d(-18px, 14px, 0) rotate(-1.9deg) scale(1.02); }
+  80% { transform: translate3d(20px, -12px, 0) rotate(1.8deg) scale(1.01); }
+  90% { transform: translate3d(-12px, -8px, 0) rotate(-1deg) scale(1); }
+  100% { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
+}
+
+.animate-catastrophic-shake {
+  animation: catastrophic-shake 0.09s infinite ease-in-out !important;
+  will-change: transform;
+}
+
+@keyframes glitch-rgb-split {
+  0% {
+    text-shadow: -2px 0 #00F0FF, 2px 0 #FF0055;
+    clip-path: inset(10% 0 80% 0);
+  }
+  20% {
+    text-shadow: 2px -1px #00F0FF, -2px 1px #FF0055;
+    clip-path: inset(60% 0 10% 0);
+  }
+  40% {
+    text-shadow: -3px 2px #00F0FF, 3px -2px #FF0055;
+    clip-path: inset(25% 0 50% 0);
+  }
+  60% {
+    text-shadow: 2px 1px #00F0FF, -2px -1px #FF0055;
+    clip-path: inset(80% 0 5% 0);
+  }
+  80% {
+    text-shadow: -1px -2px #00F0FF, 1px 2px #FF0055;
+    clip-path: inset(40% 0 35% 0);
+  }
+  100% {
+    text-shadow: -2px 0 #00F0FF, 2px 0 #FF0055;
+    clip-path: inset(10% 0 80% 0);
+  }
+}
+
+.animate-glitch-text {
+  animation: glitch-rgb-split 0.25s infinite linear alternate-reverse;
+}
+
+@keyframes crt-scanlines {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(100%); }
+}
+
+.animate-scanline-sweep {
+  animation: crt-scanlines 4s linear infinite;
+}
+
+

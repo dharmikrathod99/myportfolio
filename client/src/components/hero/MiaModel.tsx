@@ -2,64 +2,45 @@
 
 import React, { Suspense, useRef, useEffect, useState, useMemo } from 'react';
 import * as THREE from 'three';
-import { Canvas, useFrame } from '@react-three/fiber';
-import { useGLTF, useAnimations, OrbitControls, Sparkles, useTexture, Environment } from '@react-three/drei';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { useGLTF, useAnimations, OrbitControls, useTexture, Environment, useProgress } from '@react-three/drei';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
+import { motion } from 'framer-motion';
 import NightSkyBackground from './NightSkyBackground';
 import CyberAssemblyHUD from './CyberAssemblyHUD';
+import { useSmoothScroll } from '@/components/SmoothScroll';
+import { useTheme } from '@/context/ThemeContext';
 
 export interface MiaModelProps {
   className?: string;
   showStatusLabel?: boolean;
 }
 
-// Background Holographic Cyber Ring
-function HolographicRing() {
-  const ringRef = useRef<THREE.Mesh>(null);
-  const outerRingRef = useRef<THREE.Mesh>(null);
-
-  useFrame((state) => {
-    const t = state.clock.elapsedTime;
-    if (ringRef.current) {
-      ringRef.current.rotation.z = t * 0.15;
+// -------------------------------------------------------------
+// WEBGL GPU PRE-COMPILATION PIPELINE
+// Compiles all shaders and textures in the background so there is
+// ZERO frame-drop or stutter when the model appears.
+// -------------------------------------------------------------
+function PrecompilePipeline() {
+  const { gl, scene, camera } = useThree();
+  useEffect(() => {
+    try {
+      if (gl && scene && camera) {
+        gl.compile(scene, camera);
+      }
+    } catch {
+      // Safe fallback
     }
-    if (outerRingRef.current) {
-      outerRingRef.current.rotation.z = -t * 0.08;
-    }
-  });
+  }, [gl, scene, camera]);
 
-  return (
-    <group position={[0, 0.15, -0.8]}>
-      {/* Inner Glowing Ring */}
-      <mesh ref={ringRef}>
-        <ringGeometry args={[1.3, 1.33, 64]} />
-        <meshBasicMaterial
-          color="#38BDF8"
-          transparent
-          opacity={0.35}
-          side={THREE.DoubleSide}
-        />
-      </mesh>
-
-      {/* Outer Dashed/Faint Ring */}
-      <mesh ref={outerRingRef}>
-        <ringGeometry args={[1.65, 1.67, 48]} />
-        <meshBasicMaterial
-          color="#818CF8"
-          transparent
-          opacity={0.2}
-          side={THREE.DoubleSide}
-        />
-      </mesh>
-    </group>
-  );
+  return null;
 }
 
 // 4K Studio Lighting Rig
 function StudioLighting() {
   return (
     <>
-      {/* Smooth Atmosphere Fog */}
+      {/* Atmosphere Fog */}
       <fog attach="fog" args={['#070A14', 3.2, 7.5]} />
 
       {/* Ambient Fill */}
@@ -97,363 +78,59 @@ function StudioLighting() {
 }
 
 // -------------------------------------------------------------
-// 3D HOLOGRAPHIC SCANNING LASER BEAM
-// -------------------------------------------------------------
-function HoloScanLaser({ progress }: { progress: number }) {
-  const laserRef = useRef<THREE.Group>(null);
-  const scanRingRef = useRef<THREE.Mesh>(null);
-  const lightRef = useRef<THREE.PointLight>(null);
-
-  useFrame((state) => {
-    if (!laserRef.current || progress >= 1.0) return;
-    const t = state.clock.elapsedTime;
-
-    // Sweeping vertical scan beam through Mia's body & head
-    const scanHeight = -0.55 + 0.95 * (Math.sin(t * 3.8) * 0.5 + 0.5);
-    laserRef.current.position.y = scanHeight;
-
-    if (scanRingRef.current) {
-      scanRingRef.current.rotation.z = t * 1.8;
-      const s = 1.0 + Math.sin(t * 7.0) * 0.06;
-      scanRingRef.current.scale.set(s, s, 1);
-    }
-
-    if (lightRef.current) {
-      lightRef.current.intensity = (1.0 - progress * 0.6) * (3.5 + Math.sin(t * 10.0) * 1.0);
-    }
-  });
-
-  if (progress >= 1.0) return null;
-
-  return (
-    <group ref={laserRef} position={[0, 0, 0.04]}>
-      {/* Outer Glowing Cyan Laser Scan Ring */}
-      <mesh ref={scanRingRef} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[0.32, 0.48, 64]} />
-        <meshBasicMaterial
-          color="#00F0FF"
-          transparent
-          opacity={0.65}
-          side={THREE.DoubleSide}
-          blending={THREE.AdditiveBlending}
-        />
-      </mesh>
-
-      {/* Inner High-Intensity Beam */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[0.12, 0.31, 48]} />
-        <meshBasicMaterial
-          color="#8AE4FA"
-          transparent
-          opacity={0.35}
-          side={THREE.DoubleSide}
-          blending={THREE.AdditiveBlending}
-        />
-      </mesh>
-
-      {/* Dynamic Laser Light cast on Model Vertices */}
-      <pointLight ref={lightRef} color="#00F0FF" distance={1.2} intensity={3.5} />
-    </group>
-  );
-}
-
-// -------------------------------------------------------------
-// SINGLE-PIXEL HOLOGRAPHIC PARTICLE ASSEMBLY SYSTEM
-// -------------------------------------------------------------
-const NUM_ASSEMBLY_PARTICLES = 36000;
-
-function HoloPixelAssembly({ progress }: { progress: number }) {
-  const pointsRef = useRef<THREE.Points>(null);
-  const coreOrbRef = useRef<THREE.Mesh>(null);
-  const coreRingRef = useRef<THREE.Mesh>(null);
-
-  // Generate 36,000 anatomical target coordinates mapping Mia's exact 3D bust & head
-  const { geometry, shaderMaterial } = useMemo(() => {
-    const positions = new Float32Array(NUM_ASSEMBLY_PARTICLES * 3);
-    const aTarget = new Float32Array(NUM_ASSEMBLY_PARTICLES * 3);
-    const aOrigin = new Float32Array(NUM_ASSEMBLY_PARTICLES * 3);
-    const aDelay = new Float32Array(NUM_ASSEMBLY_PARTICLES);
-    const aColor = new Float32Array(NUM_ASSEMBLY_PARTICLES * 3);
-    const aSize = new Float32Array(NUM_ASSEMBLY_PARTICLES);
-    const aVortex = new Float32Array(NUM_ASSEMBLY_PARTICLES);
-
-    let idx = 0;
-
-    // Helper to add a particle
-    const addPt = (
-      tx: number,
-      ty: number,
-      tz: number,
-      delay: number,
-      color: [number, number, number],
-      size: number,
-      vortex: number
-    ) => {
-      // Starting position: bottom singularity energy core at [0, -0.68, 0.05]
-      const ox = (Math.random() - 0.5) * 0.08;
-      const oy = -0.68 + (Math.random() - 0.5) * 0.08;
-      const oz = 0.05 + (Math.random() - 0.5) * 0.08;
-
-      positions[idx * 3] = ox;
-      positions[idx * 3 + 1] = oy;
-      positions[idx * 3 + 2] = oz;
-
-      aOrigin[idx * 3] = ox;
-      aOrigin[idx * 3 + 1] = oy;
-      aOrigin[idx * 3 + 2] = oz;
-
-      aTarget[idx * 3] = tx;
-      aTarget[idx * 3 + 1] = ty;
-      aTarget[idx * 3 + 2] = tz;
-
-      aDelay[idx] = delay;
-
-      aColor[idx * 3] = color[0];
-      aColor[idx * 3 + 1] = color[1];
-      aColor[idx * 3 + 2] = color[2];
-
-      aSize[idx] = size;
-      aVortex[idx] = vortex;
-
-      idx++;
-    };
-
-    // 1. Head & Facial Features (15,000 pixels) - Later assembly phase
-    for (let i = 0; i < 15000; i++) {
-      const z = 0.03 + Math.random() * 0.39; // Three.js Y (height)
-      const t = (z - 0.03) / 0.39;
-      const rx = 0.13 + Math.sin(t * Math.PI) * 0.065;
-      const rz = 0.15 + Math.sin(t * Math.PI) * 0.055;
-      const theta = Math.random() * Math.PI * 2;
-      const tx = rx * Math.cos(theta) + (Math.random() - 0.5) * 0.01;
-      const ty = z + (Math.random() - 0.5) * 0.01;
-      const tz = rz * Math.sin(theta) + 0.03 + (Math.random() - 0.5) * 0.01;
-
-      // Delayed assembly for head
-      const delay = 0.25 + Math.random() * 0.45;
-      const color: [number, number, number] =
-        Math.random() < 0.6
-          ? [0.0, 0.92, 1.0] // Electric Cyan
-          : Math.random() < 0.85
-            ? [0.35, 0.75, 1.0] // Electric Sky Blue
-            : [0.95, 0.98, 1.0]; // White-hot spark
-
-      addPt(tx, ty, tz, delay, color, 2.2 + Math.random() * 1.5, 0.6 + Math.random() * 0.8);
-    }
-
-    // 2. Cybernetic Neck & Throat Implant (7,000 pixels) - High-density electric circuit
-    for (let i = 0; i < 7000; i++) {
-      const y = -0.18 + Math.random() * 0.22;
-      // Focus on front throat where the cyber circuit is
-      const theta = (Math.random() - 0.5) * Math.PI * 0.75;
-      const r = 0.095 + (Math.random() - 0.5) * 0.015;
-      const tx = r * Math.sin(theta);
-      const ty = y;
-      const tz = r * Math.cos(theta) + 0.04;
-
-      const delay = 0.15 + Math.random() * 0.35;
-      const color: [number, number, number] =
-        Math.random() < 0.5
-          ? [0.0, 1.0, 1.0] // Intense Electric Cyan
-          : Math.random() < 0.85
-            ? [0.9, 0.98, 1.0] // White-hot core
-            : [0.05, 0.55, 1.0]; // Deep neon blue
-
-      addPt(tx, ty, tz, delay, color, 2.8 + Math.random() * 1.8, 0.4 + Math.random() * 0.5);
-    }
-
-    // 3. Chest, Shoulders, and Cyber Jacket (14,000 pixels) - Erupts first
-    for (let i = 0; i < 14000; i++) {
-      const t = Math.random();
-      const ty = -0.65 + t * 0.47;
-      const w = 0.20 + Math.pow(1.0 - t, 0.85) * 0.46;
-      const side = Math.random() < 0.5 ? -1.0 : 1.0;
-      const u = Math.random();
-      const tx = side * u * w;
-      const tz = -0.04 + Math.cos(u * Math.PI * 0.5) * 0.13 + (Math.random() - 0.5) * 0.015;
-
-      const delay = (1.0 - t) * 0.28 + Math.random() * 0.18;
-      const color: [number, number, number] =
-        Math.random() < 0.65
-          ? [0.0, 0.82, 0.98] // Cyan
-          : Math.random() < 0.85
-            ? [0.55, 0.40, 0.98] // Cyber Violet
-            : [0.20, 0.95, 1.0]; // Azure
-
-      addPt(tx, ty, tz, delay, color, 2.4 + Math.random() * 1.6, 0.8 + Math.random() * 0.7);
-    }
-
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    geo.setAttribute('aTarget', new THREE.BufferAttribute(aTarget, 3));
-    geo.setAttribute('aOrigin', new THREE.BufferAttribute(aOrigin, 3));
-    geo.setAttribute('aDelay', new THREE.BufferAttribute(aDelay, 1));
-    geo.setAttribute('aColor', new THREE.BufferAttribute(aColor, 3));
-    geo.setAttribute('aSize', new THREE.BufferAttribute(aSize, 1));
-    geo.setAttribute('aVortex', new THREE.BufferAttribute(aVortex, 1));
-
-    const mat = new THREE.ShaderMaterial({
-      transparent: true,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-      uniforms: {
-        uProgress: { value: 0 },
-        uTime: { value: 0 },
-      },
-      vertexShader: `
-        uniform float uProgress;
-        uniform float uTime;
-        attribute vec3 aTarget;
-        attribute vec3 aOrigin;
-        attribute float aDelay;
-        attribute vec3 aColor;
-        attribute float aSize;
-        attribute float aVortex;
-
-        varying vec3 vColor;
-        varying float vAlpha;
-
-        void main() {
-          vColor = aColor;
-
-          // Normalized local progress for this individual quantum pixel
-          float localP = clamp((uProgress - aDelay) / max(0.001, 1.0 - aDelay), 0.0, 1.0);
-
-          // Smooth cubic ease out
-          float ease = 1.0 - pow(1.0 - localP, 3.0);
-
-          // Swirling vortex trajectory
-          float angle = (1.0 - ease) * aVortex * 6.28 + uTime * 2.5 * (1.0 - ease);
-          float radius = (1.0 - ease) * 0.38;
-          vec3 swirl = vec3(cos(angle) * radius, sin(ease * 3.1415) * 0.09, sin(angle) * radius);
-
-          // Micro electric jitter as particles lock into 4K resolution
-          float jitter = sin(uTime * 30.0 + aTarget.y * 40.0) * 0.004 * (1.0 - ease);
-
-          vec3 currentPos = mix(aOrigin, aTarget, ease) + swirl + vec3(jitter);
-
-          vec4 mvPosition = modelViewMatrix * vec4(currentPos, 1.0);
-          gl_Position = projectionMatrix * mvPosition;
-
-          // Point size with distance attenuation
-          float sizeBoost = (1.0 - ease) * 2.2;
-          gl_PointSize = (aSize + sizeBoost) * (280.0 / -mvPosition.z);
-
-          // Gracefully fade out once the 4K model is materialized (progress 0.85 -> 1.0)
-          float fadeOut = smoothstep(1.0, 0.82, uProgress);
-          vAlpha = smoothstep(0.0, 0.08, localP) * fadeOut;
-        }
-      `,
-      fragmentShader: `
-        varying vec3 vColor;
-        varying float vAlpha;
-
-        void main() {
-          vec2 coord = gl_PointCoord - vec2(0.5);
-          float dist = length(coord);
-          if (dist > 0.5) discard;
-
-          // Soft luminous core falloff
-          float glow = smoothstep(0.5, 0.0, dist);
-          float core = smoothstep(0.2, 0.0, dist);
-
-          vec3 col = mix(vColor, vec3(1.0), core * 0.65);
-          gl_FragColor = vec4(col, vAlpha * glow);
-        }
-      `,
-    });
-
-    return { geometry: geo, shaderMaterial: mat };
-  }, []);
-
-  useFrame((state) => {
-    const t = state.clock.elapsedTime;
-    shaderMaterial.uniforms.uProgress.value = progress;
-    shaderMaterial.uniforms.uTime.value = t;
-
-    // Animate Singularity Energy Core Orb
-    if (coreOrbRef.current) {
-      const orbScale = Math.max(0.001, (1.0 - Math.min(1.0, progress * 1.3))) * (1.0 + Math.sin(t * 8.0) * 0.15);
-      coreOrbRef.current.scale.setScalar(orbScale);
-      coreOrbRef.current.rotation.y = t * 2.0;
-    }
-    if (coreRingRef.current) {
-      const ringScale = Math.max(0.001, (1.0 - Math.min(1.0, progress * 1.3))) * (1.0 + Math.cos(t * 6.0) * 0.2);
-      coreRingRef.current.scale.setScalar(ringScale);
-      coreRingRef.current.rotation.z = -t * 3.0;
-    }
-  });
-
-  // Once fully assembled and dissolved, unmount points to free GPU
-  if (progress >= 1.0) {
-    return null;
-  }
-
-  return (
-    <group>
-      {/* 36,000 Quantum Voxel Points */}
-      <points ref={pointsRef} geometry={geometry} material={shaderMaterial} />
-
-      {/* Singularity Eruption Orb & Accents */}
-      <group position={[0, -0.68, 0.05]}>
-        <mesh ref={coreOrbRef}>
-          <sphereGeometry args={[0.07, 32, 32]} />
-          <meshBasicMaterial color="#00F0FF" />
-        </mesh>
-        <mesh ref={coreRingRef}>
-          <ringGeometry args={[0.09, 0.11, 32]} />
-          <meshBasicMaterial color="#38BDF8" transparent opacity={0.6} side={THREE.DoubleSide} />
-        </mesh>
-        <pointLight
-          color="#00F0FF"
-          intensity={Math.max(0, (1.0 - progress) * 5.0)}
-          distance={1.5}
-        />
-      </group>
-    </group>
-  );
-}
-
-// -------------------------------------------------------------
 // 3D MIA MODEL WITH 4K RENDERING & ELECTRIC NECK GLOW
 // -------------------------------------------------------------
 interface CharacterFaceBones {
   head?: THREE.Bone;
   neckUpper?: THREE.Bone;
   neckLower?: THREE.Bone;
+  leftEye?: THREE.Bone;
+  rightEye?: THREE.Bone;
 }
 
 interface BaseBoneRotations {
   head?: THREE.Euler;
   neckUpper?: THREE.Euler;
   neckLower?: THREE.Euler;
+  leftEye?: THREE.Euler;
+  rightEye?: THREE.Euler;
 }
 
 function Model({
   onPointerUpdate,
-  assemblyProgress,
 }: {
   onPointerUpdate?: (x: number, y: number) => void;
-  assemblyProgress: number;
 }) {
   const group = useRef<THREE.Group>(null);
   const bonesRef = useRef<CharacterFaceBones>({});
   const baseRotationsRef = useRef<BaseBoneRotations>({});
   const skinHeadMatRef = useRef<THREE.MeshStandardMaterial | null>(null);
+  const neckLightRef = useRef<THREE.PointLight | null>(null);
   const uniformsRef = useRef<{ uTime: { value: number } }>({
     uTime: { value: 0 },
   });
 
-  // Smooth interpolated angles for head tracking
+  // Smooth interpolated angles for head & eye tracking
   const currentYawRef = useRef(0);
   const currentPitchRef = useRef(0);
   const currentRollRef = useRef(0);
+  const currentEyeYawRef = useRef(0);
+  const currentEyePitchRef = useRef(0);
 
   // Load GLTF model and custom neck electric circuit emissive texture map
   const { scene, animations } = useGLTF('/models/mia.glb', true, true, (loader) => {
     loader.setMeshoptDecoder(MeshoptDecoder);
   });
   const neckEmissiveMap = useTexture('/models/neck_emissive.png');
+
+  // Filter out eye bone tracks from GLTF motion so procedural eye-tracking has 100% stable control
+  const filteredAnimations = useMemo(() => {
+    return animations.map((clip) => {
+      const cloned = clip.clone();
+      cloned.tracks = cloned.tracks.filter((track) => !track.name.toLowerCase().includes('eye'));
+      return cloned;
+    });
+  }, [animations]);
 
   useEffect(() => {
     if (neckEmissiveMap) {
@@ -463,9 +140,9 @@ function Model({
     }
   }, [neckEmissiveMap]);
 
-  const { actions, names } = useAnimations(animations, group);
+  const { actions, names } = useAnimations(filteredAnimations, group);
 
-  // Setup bones, materials, and crystal-clear eye visibility
+  // Setup bones, materials, and crystal-clear eye visibility with frustum culling
   useEffect(() => {
     const foundBones: CharacterFaceBones = {};
     const baseRotations: BaseBoneRotations = {};
@@ -473,7 +150,12 @@ function Model({
     scene.traverse((child) => {
       const childName = (child.name || '').toLowerCase();
 
-      // 1. Hide lower body parts not in the photo (legs, boots, leg wraps, lower belts, suit, tablet)
+      // Enable frustum culling for maximum performance
+      if ((child as THREE.Mesh).isMesh) {
+        child.frustumCulled = true;
+      }
+
+      // 1. Hide lower body parts not in the photo
       if (
         childName.includes('leg') ||
         childName.includes('boot') ||
@@ -482,9 +164,13 @@ function Model({
         childName.includes('wrap') ||
         childName.includes('suit') ||
         childName.includes('icosphere') ||
-        childName.includes('plane')
+        childName.includes('plane') ||
+        childName.includes('occlusion') ||
+        childName.includes('tearline')
       ) {
         child.visible = false;
+        child.castShadow = false;
+        child.receiveShadow = false;
         return;
       }
 
@@ -497,34 +183,33 @@ function Model({
           if (!mat) return;
           const matName = mat.name || '';
 
-          // Hide any lower body materials
+          // Hide any lower body materials or eye occlusion blockers
           if (
             matName.includes('Std_Skin_Leg') ||
             matName.includes('Loose_Biker_Boots') ||
             matName.includes('Leg_Wrap') ||
             matName.includes('Belt1') ||
             matName.includes('Suit1') ||
-            matName.includes('songbird')
+            matName.includes('songbird') ||
+            matName.includes('Eye_Occlusion') ||
+            matName.includes('Tearline') ||
+            matName.includes('Occlusion')
           ) {
             child.visible = false;
             return;
           }
 
-          // Enhance Ga_Eye (Iris, Pupil, Sclera)
+          // Enhance Ga_Eye (Iris, Pupil, Sclera) - Always 100% visible, opaque and razor sharp
           if (matName.includes('Ga_Eye') || matName.includes('Eye')) {
-            (mat as THREE.MeshStandardMaterial).roughness = 0.08;
-            (mat as THREE.MeshStandardMaterial).metalness = 0.0;
-            mat.depthWrite = true;
-            mat.transparent = false;
-            mat.needsUpdate = true;
-          }
-
-          // Ensure Tearline and Eye Occlusion never block or fog the eye iris
-          if (matName.includes('Eye_Occlusion') || matName.includes('Tearline')) {
-            mat.depthWrite = false;
-            mat.transparent = true;
-            mat.opacity = 0.15;
-            mat.needsUpdate = true;
+            const eyeMat = mat as THREE.MeshStandardMaterial;
+            eyeMat.roughness = 0.06;
+            eyeMat.metalness = 0.0;
+            eyeMat.depthWrite = true;
+            eyeMat.depthTest = true;
+            eyeMat.transparent = false;
+            eyeMat.opacity = 1.0;
+            mesh.renderOrder = 0;
+            eyeMat.needsUpdate = true;
           }
 
           // 2B. Cybernetic Neck Electric Circuit Glowing Material & Shader FX
@@ -533,17 +218,16 @@ function Model({
             stdMat.emissiveMap = neckEmissiveMap;
             stdMat.emissive = new THREE.Color('#0088FF');
             stdMat.emissiveIntensity = 2.4;
-            stdMat.roughness = 0.46; // Natural soft skin texture
+            stdMat.roughness = 0.46;
             stdMat.metalness = 0.04;
 
-            // Inject custom 3-second electric neon blue glow & glow-off shader
             stdMat.onBeforeCompile = (shader) => {
               shader.uniforms.uTime = uniformsRef.current.uTime;
               shader.fragmentShader = `
                 uniform float uTime;
               ` + shader.fragmentShader;
 
-              // 1. Invert white-painted diffuse map into dark titanium cyber metal
+              // Invert white-painted diffuse map into dark titanium cyber metal
               shader.fragmentShader = shader.fragmentShader.replace(
                 '#include <map_fragment>',
                 `
@@ -554,7 +238,6 @@ function Model({
                     vec4 neckMask = texture2D( emissiveMap, vMapUv );
                     float isCyberCircuit = dot(neckMask.rgb, vec3(0.299, 0.587, 0.114));
                     if (isCyberCircuit > 0.03) {
-                      // Replace flat white paint with dark titanium cyberware metal
                       vec3 darkTitanium = vec3(0.035, 0.055, 0.085);
                       sampledDiffuseColor.rgb = mix(sampledDiffuseColor.rgb, darkTitanium, min(1.0, isCyberCircuit * 1.8));
                     }
@@ -565,7 +248,7 @@ function Model({
                 `
               );
 
-              // 2. Pure Light Electric Neon Blue Glow & Glow-off Cycle
+              // Pure Light Electric Neon Blue Glow & Glow-off Cycle
               shader.fragmentShader = shader.fragmentShader.replace(
                 '#include <emissivemap_fragment>',
                 `
@@ -573,42 +256,33 @@ function Model({
                   vec4 emissiveTex = texture2D( emissiveMap, vEmissiveMapUv );
                   float lum = dot(emissiveTex.rgb, vec3(0.299, 0.587, 0.114));
                   
-                  // Only illuminate where cyber circuit lines exist
                   if (lum > 0.03) {
-                    // EXACT 3-SECOND AUTOMATIC NEON ELECTRIC GLOW & GLOW-OFF CYCLE
                     float tau = mod(uTime, 3.0);
                     float neonPower = 0.0;
                     
                     if (tau < 0.16) {
-                      // High-voltage double-strike ignition (electric flicker on)
                       float strike1 = step(0.02, tau) * (1.0 - step(0.06, tau));
                       float strike2 = step(0.09, tau);
                       neonPower = (strike1 * 1.5 + strike2 * 2.0);
                     } else if (tau < 1.45) {
-                      // FULL GLOW ON: Energized electric neon blue with traveling bio-current
                       float wave = sin(vEmissiveMapUv.y * 36.0 - uTime * 6.5) * 0.20 + 0.90;
                       neonPower = wave * 2.0;
                     } else if (tau < 1.95) {
-                      // Voltage discharge (smooth electrical fade down to off)
                       float fade = (1.95 - tau) / 0.50;
                       neonPower = smoothstep(0.0, 1.0, fade) * 1.4;
                     } else if (tau < 2.85) {
-                      // FULL GLOW OFF: Zero emissive, dark titanium cyberware
                       neonPower = 0.0;
                     } else {
-                      // Pre-strike electrical simmer right before ignition
                       float charge = (tau - 2.85) / 0.15;
                       neonPower = charge * 0.30;
                     }
 
-                    // Electric micro-sparks & current jitter
                     float jitter = sin(uTime * 50.0) * sin(uTime * 70.0) * 0.12;
                     float spark = step(0.965, fract(sin(dot(vEmissiveMapUv.xy, vec2(12.9898, 78.233)) + uTime * 15.0) * 43758.5453));
 
-                    // Pure Light Electric Neon Blue Palette (Vibrant Electric Cyan-Blue)
-                    vec3 electricNeonBlue = vec3(0.0, 0.72, 1.0);  // Brilliant electric neon blue #00B8FF
-                    vec3 deepElectricBlue = vec3(0.0, 0.40, 1.0);  // Saturated azure base #0066FF
-                    vec3 neonCyanCore    = vec3(0.10, 0.92, 1.0);  // High-energy neon core #1AEBFF
+                    vec3 electricNeonBlue = vec3(0.0, 0.72, 1.0);
+                    vec3 deepElectricBlue = vec3(0.0, 0.40, 1.0);
+                    vec3 neonCyanCore    = vec3(0.10, 0.92, 1.0);
 
                     vec3 currentGlow = mix(deepElectricBlue, electricNeonBlue, 0.5 + 0.5 * sin(vEmissiveMapUv.y * 28.0 - uTime * 6.0));
                     currentGlow = mix(currentGlow, neonCyanCore, spark * 0.5);
@@ -627,19 +301,18 @@ function Model({
             skinHeadMatRef.current = stdMat;
           }
 
-          // 2C. MODEL CLOTH WEAR WITH NEON ULTRA HD
-          // Main Cyber Jacket: Deep obsidian/carbon tech-leather
+          // Main Cyber Jacket
           if (matName.includes('Jacket1')) {
             const stdMat = mat as THREE.MeshStandardMaterial;
-            stdMat.color = new THREE.Color('#10141D'); // Deep sleek cyberpunk carbon black
-            stdMat.roughness = 0.35; // Premium tactical leather sheen
-            stdMat.metalness = 0.22; // Subtle cyber-fabric metallic weave
+            stdMat.color = new THREE.Color('#10141D');
+            stdMat.roughness = 0.35;
+            stdMat.metalness = 0.22;
             stdMat.depthWrite = true;
             stdMat.transparent = false;
             stdMat.needsUpdate = true;
           }
 
-          // Glowing Neon Ultra HD Cyber Piping (Collar rim, lapels, and shoulder straps)
+          // Glowing Neon Ultra HD Cyber Piping
           if (matName.includes('Jacket2') || matName.includes('Jacket4')) {
             const stdMat = mat as THREE.MeshStandardMaterial;
             stdMat.color = new THREE.Color('#00F0FF');
@@ -652,7 +325,7 @@ function Model({
             stdMat.needsUpdate = true;
           }
 
-          // Metallic Buckles, Rings & Hardware (Chrome / Titanium)
+          // Metallic Buckles, Rings & Hardware
           if (
             matName.includes('Belt2') ||
             matName.includes('Jacket3') ||
@@ -701,17 +374,28 @@ function Model({
         if (name.includes('Head') || name.toLowerCase().includes('head')) {
           foundBones.head = bone;
           baseRotations.head = bone.rotation.clone();
+        } else if (name.includes('L_Eye') || name.toLowerCase().includes('lefteye') || name.includes('Eye_L')) {
+          foundBones.leftEye = bone;
+          // In CC4 model, bind pose eye bone is rolled 90 deg backward; set true forward-facing Euler:
+          baseRotations.leftEye = new THREE.Euler(1.5846, 1.5180, 1.5683, 'XYZ');
+          bone.rotation.copy(baseRotations.leftEye);
+        } else if (name.includes('R_Eye') || name.toLowerCase().includes('righteye') || name.includes('Eye_R')) {
+          foundBones.rightEye = bone;
+          // True forward-facing Euler for right eye bone:
+          baseRotations.rightEye = new THREE.Euler(1.5362, 1.5178, 1.5737, 'XYZ');
+          bone.rotation.copy(baseRotations.rightEye);
         } else if (name.includes('NeckTwist02') || name.includes('Neck_02')) {
           foundBones.neckUpper = bone;
           baseRotations.neckUpper = bone.rotation.clone();
 
-          // Add targeted neck electric lighting glow
-          if (!bone.getObjectByName('NeckElectricLight')) {
-            const neckLight = new THREE.PointLight(0x00E5FF, 3.2, 0.9);
+          let neckLight = bone.getObjectByName('NeckElectricLight') as THREE.PointLight | null;
+          if (!neckLight) {
+            neckLight = new THREE.PointLight(0x00E5FF, 3.2, 0.9);
             neckLight.name = 'NeckElectricLight';
             neckLight.position.set(0, 0.05, 0.12);
             bone.add(neckLight);
           }
+          neckLightRef.current = neckLight;
         } else if (name.includes('NeckTwist01') || name.includes('Neck') || name.toLowerCase().includes('neck')) {
           foundBones.neckLower = bone;
           baseRotations.neckLower = bone.rotation.clone();
@@ -722,13 +406,12 @@ function Model({
     bonesRef.current = foundBones;
     baseRotationsRef.current = baseRotations;
 
-    // Play default ambient idle action if available
     if (names.length > 0 && actions[names[0]]) {
       actions[names[0]]?.reset().fadeIn(0.5).play();
     }
   }, [actions, names, scene, neckEmissiveMap]);
 
-  // Real-time Face & Head ONLY Mouse Tracking with 4K Shading & Assembly Dissolve
+  // Real-time Face & Head Mouse Tracking
   useFrame((state, delta) => {
     const { pointer } = state;
 
@@ -736,81 +419,79 @@ function Model({
       onPointerUpdate(pointer.x, pointer.y);
     }
 
-    // Materialize model based on assembly progress (smooth fade in during 0.70 -> 1.0)
-    if (group.current) {
-      const isVisible = assemblyProgress >= 0.70;
-      group.current.visible = isVisible;
-
-      if (isVisible) {
-        // Materialization scale/opacity pop
-        const matEase = Math.min(1.0, (assemblyProgress - 0.70) / 0.28);
-        const scaleVal = 1.5 * (0.96 + 0.04 * Math.sin(matEase * Math.PI * 0.5));
-        group.current.scale.setScalar(scaleVal);
-      }
-    }
-
-    // Update shader time uniform for flowing electric pulse waves
     uniformsRef.current.uTime.value = state.clock.elapsedTime;
 
-    // Calculate 3-Second Automatic Electric Neon Power Cycle (0 to 3s)
     const t = state.clock.elapsedTime;
     const tau = t % 3.0;
     let neonPower = 0.0;
 
     if (tau < 0.15) {
-      // High-voltage double-strike ignition (flicker on)
       const strike1 = (tau >= 0.02 && tau < 0.05) ? 1.0 : 0.0;
       const strike2 = tau >= 0.08 ? 1.0 : 0.0;
       neonPower = strike1 * 1.6 + strike2 * 1.9;
     } else if (tau < 1.45) {
-      // Energized glow with pulsing current
       const wave = Math.sin(t * 7.5) * 0.18 + 0.90;
       neonPower = wave * 1.8;
     } else if (tau < 1.95) {
-      // Smooth voltage decay into glow-off
       const fade = (1.95 - tau) / 0.50;
       neonPower = fade * fade * 1.2;
     } else if (tau < 2.85) {
-      // GLOW OFF (Dark metallic state)
       neonPower = 0.01;
     } else {
-      // Pre-strike simmer
       const charge = (tau - 2.85) / 0.15;
       neonPower = charge * 0.35;
     }
 
-    // Animate material emissive intensity fallback & color in electric blue
+    // Direct ref updates avoiding object allocations in useFrame
     if (skinHeadMatRef.current) {
-      skinHeadMatRef.current.emissive.set('#0077FF');
       skinHeadMatRef.current.emissiveIntensity = Math.max(0.02, neonPower * 2.2);
     }
 
-    // Animate targeted neck electric blue point light
-    if (bonesRef.current.neckUpper) {
-      const neckLight = bonesRef.current.neckUpper.getObjectByName('NeckElectricLight') as THREE.PointLight | null;
-      if (neckLight) {
-        neckLight.color.set('#00D2FF');
-        neckLight.intensity = Math.max(0.02, neonPower * 3.6);
-      }
+    if (neckLightRef.current) {
+      neckLightRef.current.intensity = Math.max(0.02, neonPower * 3.6);
     }
 
-    // Head tracking (active when assembly is near complete)
-    const trackWeight = Math.min(1.0, Math.max(0.0, (assemblyProgress - 0.85) / 0.15));
-
-    const targetYaw = pointer.x * 0.45 * trackWeight;
-    const targetPitch = -pointer.y * 0.25 * trackWeight;
-    const targetRoll = -pointer.x * pointer.y * 0.04 * trackWeight;
+    // Head & Neck tracking
+    const targetYaw = pointer.x * 0.45;
+    const targetPitch = -pointer.y * 0.25;
+    const targetRoll = -pointer.x * pointer.y * 0.04;
 
     currentYawRef.current = THREE.MathUtils.damp(currentYawRef.current, targetYaw, 7.5, delta);
     currentPitchRef.current = THREE.MathUtils.damp(currentPitchRef.current, targetPitch, 7.5, delta);
     currentRollRef.current = THREE.MathUtils.damp(currentRollRef.current, targetRoll, 7.5, delta);
 
+    // Eye Gaze Tracking: Natural, focused eye movement tracking the mouse cursor
+    const targetEyeYaw = pointer.x * 0.18;
+    const targetEyePitch = -pointer.y * 0.14;
+
+    currentEyeYawRef.current = THREE.MathUtils.damp(currentEyeYawRef.current, targetEyeYaw, 10.0, delta);
+    currentEyePitchRef.current = THREE.MathUtils.damp(currentEyePitchRef.current, targetEyePitch, 10.0, delta);
+
     const yaw = currentYawRef.current;
     const pitch = currentPitchRef.current;
     const roll = currentRollRef.current;
+    const eyeYaw = currentEyeYawRef.current;
+    const eyePitch = currentEyePitchRef.current;
 
     const bones = bonesRef.current;
     const base = baseRotationsRef.current;
+
+    // Apply eye gaze focus: In local bone Euler space, Y controls yaw (left/right) and X controls pitch (up/down)
+    if (bones.leftEye && base.leftEye) {
+      bones.leftEye.rotation.set(
+        base.leftEye.x + eyePitch,
+        base.leftEye.y + eyeYaw,
+        base.leftEye.z
+      );
+    }
+
+    if (bones.rightEye && base.rightEye) {
+      bones.rightEye.rotation.set(
+        base.rightEye.x + eyePitch,
+        base.rightEye.y + eyeYaw,
+        base.rightEye.z
+      );
+    }
 
     if (bones.head && base.head) {
       bones.head.rotation.y = base.head.y + yaw * 0.70;
@@ -853,105 +534,191 @@ useGLTF.preload('/models/mia.glb', true, true, (loader) => {
 });
 useTexture.preload('/models/neck_emissive.png');
 
-// Scene Assembly Controller
-function AssemblyController({
-  onProgressUpdate,
-  resetSignal,
-}: {
-  onProgressUpdate: (p: number) => void;
-  resetSignal: number;
-}) {
-  const progressRef = useRef(0);
-
-  useEffect(() => {
-    progressRef.current = 0;
-  }, [resetSignal]);
-
-  useFrame((_, delta) => {
-    if (progressRef.current < 1.0) {
-      // ~3.6s assemble duration
-      progressRef.current = Math.min(1.0, progressRef.current + delta * 0.28);
-      onProgressUpdate(progressRef.current);
-    }
-  });
-
-  return null;
-}
-
 export function MiaModel({ className = '', showStatusLabel = true }: MiaModelProps) {
   const [mounted, setMounted] = useState(false);
   const [mouseCoords, setMouseCoords] = useState({ x: 0, y: 0 });
-  const [assemblyProgress, setAssemblyProgress] = useState(0);
-  const [resetCount, setResetCount] = useState(0);
+  const { lenis } = useSmoothScroll();
+  const { setIsSiteLoading } = useTheme();
+
+  // Real Three.js asset loading tracker
+  const { active, progress: realProgress, item, loaded, total } = useProgress();
+  const [hasCompletedInitialLoad, setHasCompletedInitialLoad] = useState(false);
+
+  // Manual replay state
+  const [manualTrigger, setManualTrigger] = useState(false);
+  const [manualProgress, setManualProgress] = useState(0);
+
+  // Shaking and flare effects
+  const [isShaking, setIsShaking] = useState(false);
+  const [showFlare, setShowFlare] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  const handleReassemble = () => {
-    setAssemblyProgress(0);
-    setResetCount((prev) => prev + 1);
+  // Check if model was already cached on mount
+  useEffect(() => {
+    if (!active && realProgress === 100) {
+      setHasCompletedInitialLoad(true);
+      setIsSiteLoading(false);
+    }
+  }, [active, realProgress, setIsSiteLoading]);
+
+  // Handle manual replay simulation (smooth 0 to 100 progress over ~1.8s)
+  useEffect(() => {
+    if (!manualTrigger) return;
+    let cur = 0;
+    const interval = setInterval(() => {
+      cur += 4;
+      if (cur >= 100) {
+        cur = 100;
+        setManualProgress(100);
+        clearInterval(interval);
+      } else {
+        setManualProgress(cur);
+      }
+    }, 45);
+
+    return () => clearInterval(interval);
+  }, [manualTrigger]);
+
+  const handleReplay = () => {
+    setManualProgress(0);
+    setManualTrigger(true);
+    setIsShaking(false);
+    setIsSiteLoading(true);
   };
+
+  const handleSkip = () => {
+    setHasCompletedInitialLoad(true);
+    setManualTrigger(false);
+    setIsShaking(false);
+    setIsSiteLoading(false);
+  };
+
+  const handleComplete = () => {
+    setHasCompletedInitialLoad(true);
+    setManualTrigger(false);
+    setIsShaking(false);
+    setShowFlare(true);
+    setIsSiteLoading(false);
+    setTimeout(() => {
+      setShowFlare(false);
+    }, 850);
+  };
+
+  // Only show the full-screen terminal if model is ACTUALLY loading or manually re-triggered
+  const isActualLoading = !hasCompletedInitialLoad && (active || realProgress < 100);
+  const shouldShowLoader = isActualLoading || manualTrigger;
+  const currentProgress = manualTrigger ? manualProgress : realProgress;
+
+  // Synchronize site loading state to hide navbar while loading
+  useEffect(() => {
+    setIsSiteLoading(shouldShowLoader);
+  }, [shouldShowLoader, setIsSiteLoading]);
+
+  // Reset loading state if unmounted
+  useEffect(() => {
+    return () => {
+      setIsSiteLoading(false);
+    };
+  }, [setIsSiteLoading]);
+
+  // Complete page scroll lock while loading is active
+  useEffect(() => {
+    if (shouldShowLoader) {
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+      window.scrollTo(0, 0);
+
+      if (lenis) {
+        lenis.stop();
+        lenis.scrollTo(0, { immediate: true });
+      }
+
+      const preventDefaultScroll = (e: Event) => {
+        e.preventDefault();
+      };
+
+      window.addEventListener('wheel', preventDefaultScroll, { passive: false });
+      window.addEventListener('touchmove', preventDefaultScroll, { passive: false });
+
+      return () => {
+        document.body.style.overflow = '';
+        document.documentElement.style.overflow = '';
+        if (lenis) {
+          lenis.start();
+        }
+        window.removeEventListener('wheel', preventDefaultScroll);
+        window.removeEventListener('touchmove', preventDefaultScroll);
+      };
+    } else {
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+      if (lenis) {
+        lenis.start();
+      }
+    }
+  }, [shouldShowLoader, lenis]);
 
   if (!mounted) {
     return (
       <div className={`relative w-full h-full min-h-[100dvh] flex items-center justify-center bg-[#070A14] ${className}`}>
         <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 rounded-full border-2 border-[#38BDF8]/30 border-t-[#38BDF8] animate-spin" />
-          <p className="text-xs font-mono text-[#8AE4FA] uppercase tracking-widest animate-pulse">
-            INITIALIZING 4K NEURAL ASSEMBLY...
-          </p>
+          <div className="w-10 h-10 rounded-full border-2 border-[#38BDF8]/30 border-t-[#38BDF8] animate-spin" />
         </div>
       </div>
     );
   }
 
-  const isAssembling = assemblyProgress < 1.0;
-  const progressPercent = Math.min(100, Math.floor(assemblyProgress * 100));
-
   return (
     <div
-      className={`relative w-full h-[100dvh] min-h-[100dvh] flex items-center justify-center overflow-hidden bg-[#070A14] select-none touch-pan-y ${className}`}
+      className={`relative w-full h-[100dvh] min-h-[100dvh] flex items-center justify-center overflow-hidden bg-[#070A14] select-none touch-pan-y ${
+        isShaking ? 'animate-catastrophic-shake' : ''
+      } ${className}`}
     >
-      {/* 1. Exact 100% Night Sky Background with Twinkling Stars & Shooting Comets */}
+      {/* 1. Exact Night Sky Background with Twinkling Stars & Shooting Comets */}
       <NightSkyBackground />
 
-      {/* 2. 4K Ultra-HD 3D WebGL Canvas Layer */}
+      {/* 2. Blinding Cyan/White Reboot Shockwave Flare upon server restore */}
+      {showFlare && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.6 }}
+          animate={{ opacity: [0, 1, 0], scale: [0.6, 1.4, 2.2] }}
+          transition={{ duration: 0.8, ease: 'easeOut' }}
+          className="fixed inset-0 z-50 pointer-events-none flex items-center justify-center overflow-hidden"
+        >
+          <div className="w-[150vw] h-[150vh] rounded-full bg-[radial-gradient(circle,_rgba(255,255,255,1)_0%,_rgba(0,240,255,0.85)_30%,_rgba(56,189,248,0.3)_60%,_transparent_75%)] mix-blend-screen" />
+        </motion.div>
+      )}
+
+      {/* 3. 4K Ultra-HD 3D WebGL Canvas Layer (Ultra Fast, Zero Lag) */}
       <div className="absolute inset-0 w-full h-full z-10">
         <Canvas
-          dpr={[1, 2]} // 4K / High-DPI Resolution
+          dpr={[1, 1.75]} // 4K retina clamping for locked 60+ FPS
           camera={{ position: [0, 0.05, 1.85], fov: 36 }}
           gl={{
             antialias: true,
             alpha: true,
+            stencil: false,
             powerPreference: 'high-performance',
             toneMapping: THREE.ACESFilmicToneMapping,
             toneMappingExposure: 1.16,
           }}
           className="w-full h-full cursor-grab active:cursor-grabbing"
         >
-          {/* Timeline Animation Controller */}
-          <AssemblyController
-            onProgressUpdate={setAssemblyProgress}
-            resetSignal={resetCount}
-          />
+          {/* Background Precompilation */}
+          <PrecompilePipeline />
 
           {/* 4K Studio Lighting */}
           <StudioLighting />
 
-          {/* Realistic PBR Environment Reflections for 4K Leather & Chrome Hardware */}
+          {/* Realistic PBR Environment Reflections */}
           <Environment preset="city" environmentIntensity={0.4} />
-
-          {/* 3D Holographic Laser Scan Grid */}
-          <HoloScanLaser progress={assemblyProgress} />
-
-          {/* Single-Pixel Quantum Assembly Particle Engine */}
-          <HoloPixelAssembly progress={assemblyProgress} />
 
           {/* 4K Model with Face/Head Tracking & Electric Neck Glow */}
           <Suspense fallback={null}>
             <Model
-              assemblyProgress={assemblyProgress}
               onPointerUpdate={(x, y) => {
                 setMouseCoords({
                   x: Number(x.toFixed(2)),
@@ -961,7 +728,7 @@ export function MiaModel({ className = '', showStatusLabel = true }: MiaModelPro
             />
           </Suspense>
 
-          {/* User Interaction OrbitControls */}
+          {/* OrbitControls */}
           <OrbitControls
             target={[0, 0.05, 0]}
             enableZoom={false}
@@ -976,20 +743,26 @@ export function MiaModel({ className = '', showStatusLabel = true }: MiaModelPro
         </Canvas>
       </div>
 
-      {/* 3. High-Tech Cybernetic Holographic HUD Assembly Telemetry */}
-      {isAssembling && (
+      {/* 4. Full-Screen Cyberpunk Coding Terminal Loader */}
+      {shouldShowLoader && (
         <CyberAssemblyHUD
-          progress={assemblyProgress}
-          onReassemble={handleReassemble}
+          progress={currentProgress}
+          item={item}
+          loaded={loaded}
+          total={total}
+          isManualTrigger={manualTrigger}
+          onShake={setIsShaking}
+          onComplete={handleComplete}
+          onSkip={handleSkip}
         />
       )}
 
       {/* Corner Tech Brackets with Live Tracking Telemetry */}
-      <div className="absolute top-28 left-6 sm:left-12 pointer-events-none select-none z-20 hidden md:block">
+      <div className="absolute top-24 sm:top-28 left-6 sm:left-12 pointer-events-none select-none z-20 hidden md:block">
         <div className="flex flex-col gap-1 text-[10px] font-mono text-[#38BDF8]/70 tracking-wider">
           <div className="flex items-center gap-1.5 text-[#38BDF8]">
             <span className="inline-block w-2 h-2 border-t-2 border-l-2 border-[#38BDF8]" />
-            <span>{isAssembling ? 'NEURAL_MATRIX // ASSEMBLING' : 'FACE_TRACKING // ACTIVE'}</span>
+            <span>EYE_GAZE & FACE // TRACKING</span>
           </div>
           <span className="text-[9px] text-[#94A3B8]/70 font-mono">
             TARGET_LOCK: [{mouseCoords.x >= 0 ? `+${mouseCoords.x}` : mouseCoords.x},{' '}
@@ -998,29 +771,29 @@ export function MiaModel({ className = '', showStatusLabel = true }: MiaModelPro
         </div>
       </div>
 
-      <div className="absolute top-28 right-6 sm:right-12 pointer-events-none select-none z-20 hidden md:block text-right">
+      <div className="absolute top-24 sm:top-28 right-6 sm:right-12 pointer-events-none select-none z-20 hidden md:block text-right">
         <div className="flex flex-col gap-1 text-[10px] font-mono text-[#C084FC]/70 tracking-wider items-end">
           <div className="flex items-center gap-1.5 text-[#C084FC]">
             <span>ELECTRIC_NECK // GLOWING</span>
             <span className="inline-block w-2 h-2 border-t-2 border-r-2 border-[#C084FC]" />
           </div>
-          <span className="text-[9px] text-[#94A3B8]/70 font-mono">4K RESOLUTION // 60 FPS</span>
+          <span className="text-[9px] text-[#94A3B8]/70 font-mono">4K ULTRA-HD // 60 FPS</span>
         </div>
       </div>
 
-      {/* Interactive Control Hint Pill & Re-assemble Trigger */}
+      {/* Interactive Control Hint Pill & Re-trigger Button */}
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col sm:flex-row items-center gap-3 select-none z-20">
         <div className="flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-[#0D1527]/85 border border-[#38BDF8]/40 backdrop-blur-md text-[11px] font-mono text-[#8AE4FA] shadow-[0_0_25px_rgba(56,189,248,0.25)] pointer-events-none">
           <span className="w-1.5 h-1.5 rounded-full bg-[#38BDF8] animate-ping" />
-          <span className="tracking-wider">MOVE CURSOR TO FOCUS FACE // DRAG TO ROTATE</span>
+          <span className="tracking-wider">MOVE CURSOR FOR EYES & FACE FOCUS // DRAG TO ROTATE</span>
         </div>
 
-        {/* Re-assemble Button */}
+        {/* Re-trigger Server Crash & Loading Button */}
         <button
-          onClick={handleReassemble}
-          className="px-3 py-1 rounded-full bg-[#090D1A]/90 border border-[#38BDF8]/50 hover:border-[#00F0FF] hover:bg-[#38BDF8]/20 transition-all text-[10px] font-mono text-[#38BDF8] hover:text-[#FFFFFF] uppercase tracking-widest cursor-pointer shadow-[0_0_15px_rgba(56,189,248,0.2)]"
+          onClick={handleReplay}
+          className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-[#090D1A]/90 border border-[#38BDF8]/60 hover:border-[#00F0FF] hover:bg-[#38BDF8]/20 transition-all text-[11px] font-mono font-bold text-[#38BDF8] hover:text-[#FFFFFF] uppercase tracking-wider cursor-pointer shadow-[0_0_20px_rgba(56,189,248,0.3)] hover:shadow-[0_0_30px_rgba(0,240,255,0.6)]"
         >
-          ↻ RE-ASSEMBLE 4K
+          <span>⚡ RE-TRIGGER CRASH & LOAD</span>
         </button>
       </div>
 
@@ -1028,9 +801,9 @@ export function MiaModel({ className = '', showStatusLabel = true }: MiaModelPro
       {showStatusLabel && (
         <div className="absolute right-4 sm:right-8 lg:right-20 top-20 sm:top-24 pointer-events-none select-none z-30">
           <div className="flex items-center gap-2 sm:gap-2.5 px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-lg bg-[#0F172A]/90 border border-[#38BDF8]/40 backdrop-blur-md shadow-[0_0_20px_rgba(56,189,248,0.25)]">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#38BDF8] animate-ping" />
+            <span className="w-1.5 h-1.5 rounded-full bg-[#00F0FF] animate-ping" />
             <span className="text-[10px] sm:text-xs font-mono font-bold tracking-widest text-[#8AE4FA] uppercase">
-              {isAssembling ? `ASSEMBLING // ${progressPercent}%` : 'MIA // 4K ONLINE'}
+              MIA // 4K ONLINE
             </span>
           </div>
         </div>

@@ -16,8 +16,10 @@ export default function Navbar({ onOpenPalette }: { onOpenPalette?: () => void }
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const { theme, toggleTheme, siteMode, isTransitioning, transformSite } = useTheme();
+  const { theme, toggleTheme, siteMode, isTransitioning, transformSite, isSiteLoading } = useTheme();
   const pathname = usePathname();
+
+  const isNavbarHidden = pathname === '/' && isSiteLoading;
 
   const isLight = theme === 'light';
 
@@ -55,9 +57,18 @@ export default function Navbar({ onOpenPalette }: { onOpenPalette?: () => void }
   ];
 
   return (
-    <div className="fixed top-4 left-0 right-0 z-50 flex justify-center pointer-events-none px-3 sm:px-4">
-      {/* Dynamic Island Capsule with Transparent Liquid Glass & Flowing Liquid Metal */}
-      <motion.div
+    <AnimatePresence>
+      {!isNavbarHidden && (
+        <motion.div
+          key="floating-navbar-island"
+          initial={{ opacity: 0, y: -30 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -30 }}
+          transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+          className="fixed top-4 left-0 right-0 z-50 flex justify-center pointer-events-none px-3 sm:px-4"
+        >
+          {/* Dynamic Island Capsule with Transparent Liquid Glass & Flowing Liquid Metal */}
+          <motion.div
         layout
         onMouseEnter={() => !isMobile && setIsHovered(true)}
         onMouseLeave={() => !isMobile && setIsHovered(false)}
@@ -364,6 +375,8 @@ export default function Navbar({ onOpenPalette }: { onOpenPalette?: () => void }
         </AnimatePresence>
 
       </motion.div>
-    </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
