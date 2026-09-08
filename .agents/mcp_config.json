@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "blender": {
+      "command": "C:\\Users\\DELL\\.local\\bin\\blender-mcp.exe",
+      "args": []
+    }
+  }
+}

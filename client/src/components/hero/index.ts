@@ -6,3 +6,4 @@ export * from './DKInteractionBar';
 export * from './HeroUI';
 export * from './HeroSection';
 export * from './CyberX81Model';
+export * from './MiaModel';
