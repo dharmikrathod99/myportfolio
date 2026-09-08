@@ -123,15 +123,6 @@ function Model({
   });
   const neckEmissiveMap = useTexture('/models/neck_emissive.png');
 
-  // Filter out eye bone tracks from GLTF motion so procedural eye-tracking has 100% stable control
-  const filteredAnimations = useMemo(() => {
-    return animations.map((clip) => {
-      const cloned = clip.clone();
-      cloned.tracks = cloned.tracks.filter((track) => !track.name.toLowerCase().includes('eye'));
-      return cloned;
-    });
-  }, [animations]);
-
   useEffect(() => {
     if (neckEmissiveMap) {
       neckEmissiveMap.flipY = false;
@@ -140,7 +131,8 @@ function Model({
     }
   }, [neckEmissiveMap]);
 
-  const { actions, names } = useAnimations(filteredAnimations, group);
+  // Use model animations directly to preserve exact 3D eye socket positions and forward keyframes
+  const { actions, names } = useAnimations(animations, group);
 
   // Setup bones, materials, and crystal-clear eye visibility with frustum culling
   useEffect(() => {
@@ -376,14 +368,10 @@ function Model({
           baseRotations.head = bone.rotation.clone();
         } else if (name.includes('L_Eye') || name.toLowerCase().includes('lefteye') || name.includes('Eye_L')) {
           foundBones.leftEye = bone;
-          // In CC4 model, bind pose eye bone is rolled 90 deg backward; set true forward-facing Euler:
-          baseRotations.leftEye = new THREE.Euler(1.5846, 1.5180, 1.5683, 'XYZ');
-          bone.rotation.copy(baseRotations.leftEye);
+          bone.position.set(7.71875, 7.64453125, 3.33984375);
         } else if (name.includes('R_Eye') || name.toLowerCase().includes('righteye') || name.includes('Eye_R')) {
           foundBones.rightEye = bone;
-          // True forward-facing Euler for right eye bone:
-          baseRotations.rightEye = new THREE.Euler(1.5362, 1.5178, 1.5737, 'XYZ');
-          bone.rotation.copy(baseRotations.rightEye);
+          bone.position.set(7.71875, 7.64453125, -3.33984375);
         } else if (name.includes('NeckTwist02') || name.includes('Neck_02')) {
           foundBones.neckUpper = bone;
           baseRotations.neckUpper = bone.rotation.clone();
@@ -407,7 +395,7 @@ function Model({
     baseRotationsRef.current = baseRotations;
 
     if (names.length > 0 && actions[names[0]]) {
-      actions[names[0]]?.reset().fadeIn(0.5).play();
+      actions[names[0]]?.reset().play();
     }
   }, [actions, names, scene, neckEmissiveMap]);
 
@@ -461,8 +449,8 @@ function Model({
     currentRollRef.current = THREE.MathUtils.damp(currentRollRef.current, targetRoll, 7.5, delta);
 
     // Eye Gaze Tracking: Natural, focused eye movement tracking the mouse cursor
-    const targetEyeYaw = pointer.x * 0.18;
-    const targetEyePitch = -pointer.y * 0.14;
+    const targetEyeYaw = pointer.x * 0.12;
+    const targetEyePitch = -pointer.y * 0.08;
 
     currentEyeYawRef.current = THREE.MathUtils.damp(currentEyeYawRef.current, targetEyeYaw, 10.0, delta);
     currentEyePitchRef.current = THREE.MathUtils.damp(currentEyePitchRef.current, targetEyePitch, 10.0, delta);
@@ -476,21 +464,15 @@ function Model({
     const bones = bonesRef.current;
     const base = baseRotationsRef.current;
 
-    // Apply eye gaze focus: In local bone Euler space, Y controls yaw (left/right) and X controls pitch (up/down)
-    if (bones.leftEye && base.leftEye) {
-      bones.leftEye.rotation.set(
-        base.leftEye.x + eyePitch,
-        base.leftEye.y + eyeYaw,
-        base.leftEye.z
-      );
+    // Apply relative eye gaze focus on top of the forward-facing animated eye orientation
+    if (bones.leftEye) {
+      bones.leftEye.rotation.y += eyeYaw;
+      bones.leftEye.rotation.x += eyePitch;
     }
 
-    if (bones.rightEye && base.rightEye) {
-      bones.rightEye.rotation.set(
-        base.rightEye.x + eyePitch,
-        base.rightEye.y + eyeYaw,
-        base.rightEye.z
-      );
+    if (bones.rightEye) {
+      bones.rightEye.rotation.y += eyeYaw;
+      bones.rightEye.rotation.x += eyePitch;
     }
 
     if (bones.head && base.head) {
