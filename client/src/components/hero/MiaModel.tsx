@@ -8,6 +8,7 @@ import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.j
 import { motion } from 'framer-motion';
 import NightSkyBackground from './NightSkyBackground';
 import CyberAssemblyHUD from './CyberAssemblyHUD';
+import HologramModelBuilder from './HologramModelBuilder';
 import { useSmoothScroll } from '@/components/SmoothScroll';
 import { useTheme } from '@/context/ThemeContext';
 
@@ -36,7 +37,7 @@ function PrecompilePipeline() {
   return null;
 }
 
-// 4K Studio Lighting Rig
+// 4K Studio Lighting Rig - Soft Flattering Beauty Rig with Rim Lights
 function StudioLighting() {
   return (
     <>
@@ -44,42 +45,208 @@ function StudioLighting() {
       <fog attach="fog" args={['#070A14', 3.2, 7.5]} />
 
       {/* Ambient Fill */}
-      <ambientLight intensity={1.5} />
+      <ambientLight intensity={0.9} color="#D8E8F8" />
 
-      {/* Key Light (Electric Cyan on Face - 4K High Quality) */}
+      {/* Key Light (Soft Electric Sky Blue on Face - 4K High Quality) */}
       <directionalLight
-        position={[2.5, 3.0, 3.0]}
-        intensity={3.6}
-        color="#8AE4FA"
+        position={[2.2, 2.8, 2.5]}
+        intensity={2.3}
+        color="#BAE6FD"
       />
 
-      {/* Fill Light (Soft Electric Sky Blue) */}
+      {/* Fill Light (Soft Lavender Blue) */}
       <directionalLight
-        position={[-3.0, 2.0, 2.5]}
-        intensity={2.6}
-        color="#56AEEB"
+        position={[-2.5, 1.8, 2.2]}
+        intensity={1.5}
+        color="#C7D2FE"
       />
 
-      {/* Rim / Hair Light (Cyber Violet / Magenta on Silhouette) */}
-      <pointLight
-        position={[0, 2.8, -2.0]}
-        intensity={5.2}
-        color="#C084FC"
+      {/* Hair Silhouette & Rim Light - Highlights high-volume hair crown & shoulders */}
+      <directionalLight
+        position={[0, 3.4, -2.4]}
+        intensity={3.5}
+        color="#38BDF8"
       />
 
-      {/* Front Face Spotlight - Directly illuminates Eyes and Facial Features */}
+      {/* Front Soft Beauty Fill - Enhances eyes & lips without harsh blown-out glare */}
       <pointLight
-        position={[0, 0.1, 1.7]}
-        intensity={2.2}
-        color="#F0F9FF"
+        position={[0, 0.35, 1.9]}
+        intensity={0.8}
+        color="#F8FAFC"
       />
     </>
   );
 }
 
 // -------------------------------------------------------------
+// CYBERNETIC EARPHONE WITH DYNAMIC ELECTRICITY GLOW EFFECT
+// -------------------------------------------------------------
+function CyberEarphone({ headBone }: { headBone?: THREE.Bone }) {
+  const earphoneRef = useRef<THREE.Group>(null);
+  const coreLightRef = useRef<THREE.PointLight>(null);
+  const coreMatRef = useRef<THREE.MeshStandardMaterial>(null);
+  const arcMatRef = useRef<THREE.MeshBasicMaterial>(null);
+
+  useEffect(() => {
+    if (!headBone || !earphoneRef.current) return;
+    const group = earphoneRef.current;
+    headBone.add(group);
+    return () => {
+      if (headBone && group) {
+        headBone.remove(group);
+      }
+    };
+  }, [headBone]);
+
+  useFrame((state) => {
+    const t = state.clock.elapsedTime;
+    const tau = t % 3.0;
+
+    // Electric pulse synchronized with neck & face circuit animation
+    let power = 1.0;
+    if (tau < 0.16) {
+      // Rapid lightning strikes
+      const s1 = (tau >= 0.02 && tau < 0.06) ? 2.8 : 0.4;
+      const s2 = (tau >= 0.09) ? 3.4 : 0.0;
+      power = Math.max(s1, s2);
+    } else if (tau < 1.45) {
+      // Flowing electric sine wave
+      power = 1.8 + Math.sin(t * 8.0) * 0.5;
+    } else if (tau < 1.95) {
+      // Gradual decay
+      const fade = (1.95 - tau) / 0.50;
+      power = Math.max(0.3, fade * 1.6);
+    } else if (tau < 2.85) {
+      // Standby idle hum
+      power = 0.4 + Math.sin(t * 3.5) * 0.15;
+    } else {
+      // Recharge surge
+      power = 0.5 + ((tau - 2.85) / 0.15) * 1.5;
+    }
+
+    // Micro electric jitter & sparks
+    const jitter = Math.sin(t * 55.0) * Math.sin(t * 80.0) * 0.18;
+    const totalPower = Math.max(0.2, power + jitter);
+
+    if (coreLightRef.current) {
+      coreLightRef.current.intensity = totalPower * 3.5;
+    }
+    if (coreMatRef.current) {
+      coreMatRef.current.emissiveIntensity = totalPower * 4.2;
+    }
+    if (arcMatRef.current) {
+      arcMatRef.current.opacity = Math.min(1.0, 0.35 + totalPower * 0.45);
+    }
+  });
+
+  return (
+    <group
+      ref={earphoneRef}
+      name="CyberEarphone_Right"
+      position={[6.85, 1.40, -7.35]}
+      rotation={[0.15, -0.15, 0.08]}
+      scale={1.0}
+    >
+      {/* 1. Outer Brushed Titanium Earphone Chassis */}
+      <mesh rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.75, 0.88, 0.45, 32]} />
+        <meshStandardMaterial
+          color="#0A0E17"
+          roughness={0.22}
+          metalness={0.92}
+        />
+      </mesh>
+
+      {/* 2. Chamfered Chrome Outer Bezel Ring */}
+      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, -0.22]}>
+        <torusGeometry args={[0.78, 0.09, 16, 32]} />
+        <meshStandardMaterial
+          color="#1E293B"
+          roughness={0.15}
+          metalness={0.95}
+        />
+      </mesh>
+
+      {/* 3. Cybernetic Cartilage Clip / Helix Ear Hook */}
+      <mesh position={[0.45, 0.65, 0.05]} rotation={[0.4, 0.3, -0.6]}>
+        <torusGeometry args={[0.95, 0.07, 12, 32, Math.PI * 0.75]} />
+        <meshStandardMaterial
+          color="#0F172A"
+          roughness={0.18}
+          metalness={0.92}
+        />
+      </mesh>
+
+      {/* 4. Acoustic Transducer Hub (Center Titanium Cap) */}
+      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, -0.24]}>
+        <cylinderGeometry args={[0.32, 0.35, 0.12, 24]} />
+        <meshStandardMaterial
+          color="#050811"
+          roughness={0.3}
+          metalness={0.85}
+        />
+      </mesh>
+
+      {/* 5. Glowing Electric Energy Core LED Ring */}
+      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, -0.26]}>
+        <ringGeometry args={[0.38, 0.68, 32]} />
+        <meshStandardMaterial
+          ref={coreMatRef}
+          color="#00F0FF"
+          emissive="#00E5FF"
+          emissiveIntensity={3.5}
+          roughness={0.1}
+          metalness={0.2}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+
+      {/* 6. Glowing Electricity Arc Ring (Hovering Plasma Halo) */}
+      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, -0.28]}>
+        <ringGeometry args={[0.70, 0.76, 32]} />
+        <meshBasicMaterial
+          ref={arcMatRef}
+          color="#38BDF8"
+          transparent
+          opacity={0.75}
+          blending={THREE.AdditiveBlending}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+
+      {/* 7. Neural Stream Antenna / Comms Fin */}
+      <mesh position={[-0.2, -0.75, -0.15]} rotation={[0, 0, 0.25]}>
+        <boxGeometry args={[0.18, 0.95, 0.12]} />
+        <meshStandardMaterial
+          color="#0F172A"
+          roughness={0.25}
+          metalness={0.88}
+        />
+      </mesh>
+
+      {/* 8. Active Indicator Light on Comms Fin */}
+      <mesh position={[-0.2, -1.05, -0.22]}>
+        <sphereGeometry args={[0.045, 16, 16]} />
+        <meshBasicMaterial color="#00F0FF" />
+      </mesh>
+
+      {/* Dynamic Electric Point Light - Radiates electric cyan onto ear, cheek & hair */}
+      <pointLight
+        ref={coreLightRef}
+        color="#00F0FF"
+        distance={4.5}
+        intensity={3.2}
+        position={[0, 0, -0.6]}
+      />
+    </group>
+  );
+}
+
+// -------------------------------------------------------------
 // 3D MIA MODEL WITH 4K RENDERING & ELECTRIC NECK GLOW
 // -------------------------------------------------------------
+export type HairstyleId = 'flowing' | 'bun' | 'undercut';
+
 interface CharacterFaceBones {
   head?: THREE.Bone;
   neckUpper?: THREE.Bone;
@@ -98,17 +265,31 @@ interface BaseBoneRotations {
 
 function Model({
   onPointerUpdate,
+  hairstyle = 'flowing',
 }: {
   onPointerUpdate?: (x: number, y: number) => void;
+  hairstyle?: HairstyleId;
 }) {
   const group = useRef<THREE.Group>(null);
   const bonesRef = useRef<CharacterFaceBones>({});
   const baseRotationsRef = useRef<BaseBoneRotations>({});
   const skinHeadMatRef = useRef<THREE.MeshStandardMaterial | null>(null);
   const neckLightRef = useRef<THREE.PointLight | null>(null);
+  const [headBone, setHeadBone] = useState<THREE.Bone | null>(null);
+
   const uniformsRef = useRef<{ uTime: { value: number } }>({
     uTime: { value: 0 },
   });
+
+  const hairMeshesRef = useRef<{
+    undercutScalp?: THREE.Mesh;
+    undercutHair?: THREE.Mesh;
+    samuraiBun?: THREE.Mesh;
+    halfUpHair?: THREE.Mesh;
+    halfUpScalp?: THREE.Mesh;
+    hairExtra1?: THREE.SkinnedMesh;
+    hairExtra2?: THREE.SkinnedMesh;
+  }>({});
 
   // Smooth interpolated angles for head & eye tracking
   const currentYawRef = useRef(0);
@@ -117,19 +298,44 @@ function Model({
   const currentEyeYawRef = useRef(0);
   const currentEyePitchRef = useRef(0);
 
-  // Load GLTF model and custom neck electric circuit emissive texture map
+  // Load GLTF model, custom head beauty diffuse map, smoothed normal map, and neck emissive map
   const { scene, animations } = useGLTF('/models/mia.glb', true, true, (loader) => {
     loader.setMeshoptDecoder(MeshoptDecoder);
   });
-  const neckEmissiveMap = useTexture('/models/neck_emissive.png');
+  const neckEmissiveMap = useTexture('/models/neck_emissive.png?v=7');
+  const headDiffuseMap = useTexture('/models/head_diffuse.png?v=6');
+  const headNormalMap = useTexture('/models/head_normal.png?v=6');
 
   useEffect(() => {
+    // Optimized texture setup with GPU-friendly settings
+    const configureTexture = (tex: THREE.Texture, colorSpace: THREE.ColorSpace) => {
+      tex.flipY = false;
+      tex.colorSpace = colorSpace;
+      tex.generateMipmaps = true;
+      tex.minFilter = THREE.LinearMipmapLinearFilter;
+      tex.magFilter = THREE.LinearFilter;
+      tex.anisotropy = 4; // Balance between quality and GPU cost
+      tex.needsUpdate = true;
+    };
+
     if (neckEmissiveMap) {
-      neckEmissiveMap.flipY = false;
-      neckEmissiveMap.colorSpace = THREE.SRGBColorSpace;
-      neckEmissiveMap.needsUpdate = true;
+      configureTexture(neckEmissiveMap, THREE.SRGBColorSpace);
     }
-  }, [neckEmissiveMap]);
+    if (headDiffuseMap) {
+      configureTexture(headDiffuseMap, THREE.SRGBColorSpace);
+      if (skinHeadMatRef.current) {
+        skinHeadMatRef.current.map = headDiffuseMap;
+        skinHeadMatRef.current.needsUpdate = true;
+      }
+    }
+    if (headNormalMap) {
+      configureTexture(headNormalMap, THREE.LinearSRGBColorSpace);
+      if (skinHeadMatRef.current) {
+        skinHeadMatRef.current.normalMap = headNormalMap;
+        skinHeadMatRef.current.needsUpdate = true;
+      }
+    }
+  }, [neckEmissiveMap, headDiffuseMap, headNormalMap]);
 
   // Use model animations directly to preserve exact 3D eye socket positions and forward keyframes
   const { actions, names } = useAnimations(animations, group);
@@ -147,7 +353,7 @@ function Model({
         child.frustumCulled = true;
       }
 
-      // 1. Hide lower body parts not in the photo
+      // 1. Hide lower body parts not in the photo and remove robotic cyber plates on forehead
       if (
         childName.includes('leg') ||
         childName.includes('boot') ||
@@ -158,7 +364,16 @@ function Model({
         childName.includes('icosphere') ||
         childName.includes('plane') ||
         childName.includes('occlusion') ||
-        childName.includes('tearline')
+        childName.includes('tearline') ||
+        childName.includes('cyberwear_head') ||
+        child.name === 'Object_21' ||
+        child.name === 'Object_22' ||
+        child.name === 'Object_23' ||
+        child.name === 'Object_24' ||
+        child.name === 'Object_25' ||
+        child.name === 'Object_56' || // Undercut Scalp - buzzcut mesh that covered forehead in chocolate tone
+        child.name === 'Object_57' || // Undercut Hair
+        child.name === 'Object_59'    // Samurai Bun
       ) {
         child.visible = false;
         child.castShadow = false;
@@ -207,11 +422,17 @@ function Model({
           // 2B. Cybernetic Neck Electric Circuit Glowing Material & Shader FX
           if (matName.includes('Std_Skin_Head') || matName.includes('Skin_Head')) {
             const stdMat = mat as THREE.MeshStandardMaterial;
+            if (headDiffuseMap) {
+              stdMat.map = headDiffuseMap;
+            }
+            if (headNormalMap) {
+              stdMat.normalMap = headNormalMap;
+            }
             stdMat.emissiveMap = neckEmissiveMap;
             stdMat.emissive = new THREE.Color('#0088FF');
             stdMat.emissiveIntensity = 2.4;
-            stdMat.roughness = 0.46;
-            stdMat.metalness = 0.04;
+            stdMat.roughness = 0.52;
+            stdMat.metalness = 0.02;
 
             stdMat.onBeforeCompile = (shader) => {
               shader.uniforms.uTime = uniformsRef.current.uTime;
@@ -355,7 +576,66 @@ function Model({
             stdMat.transparent = false;
             stdMat.needsUpdate = true;
           }
+
+          // 2C. Luxurious, Silky, Jet Black Hair & Scalp Styling
+          if (
+            matName.includes('Hair_Transparency') ||
+            matName.includes('Hair_2_Transparency') ||
+            matName.includes('Hair_3_Transparency')
+          ) {
+            const hairMat = mat as THREE.MeshStandardMaterial;
+            hairMat.transparent = true;
+            hairMat.alphaTest = 0.08;
+            hairMat.depthWrite = true;
+            hairMat.depthTest = true;
+            hairMat.side = THREE.DoubleSide; // Render both sides of each strand card
+            hairMat.roughness = 0.28; // Silky specular highlights on black hair
+            hairMat.metalness = 0.15;
+            hairMat.color = new THREE.Color('#121214'); // Rich, deep dark black hair
+
+            // Enhance strand density so hair looks rich, thick, and lush
+            hairMat.onBeforeCompile = (shader) => {
+              shader.fragmentShader = shader.fragmentShader.replace(
+                '#include <alphatest_fragment>',
+                `
+                #ifdef USE_ALPHATEST
+                  diffuseColor.a = pow(diffuseColor.a, 0.72);
+                  if ( diffuseColor.a < alphaTest ) discard;
+                #endif
+                `
+              );
+            };
+            hairMat.needsUpdate = true;
+          }
+
+          if (matName.includes('Scalp_2_Transparency')) {
+            const scalpMat = mat as THREE.MeshStandardMaterial;
+            scalpMat.transparent = true;
+            scalpMat.alphaTest = 0.25; // Clean threshold prevents faint boundary root haze from encroaching on forehead
+            scalpMat.depthWrite = true;
+            scalpMat.opacity = 1.0;
+            scalpMat.roughness = 0.55;
+            scalpMat.metalness = 0.05;
+            scalpMat.color = new THREE.Color('#121214'); // Rich dark black matching hair
+            scalpMat.needsUpdate = true;
+          }
+
+          if (matName.includes('Scalp_3_Transparency')) {
+            // Scalp 3 belongs to undercut buzzcut which covers forehead - hide completely
+            const scalpMat = mat as THREE.MeshStandardMaterial;
+            scalpMat.visible = false;
+            scalpMat.opacity = 0.0;
+            scalpMat.transparent = true;
+            scalpMat.needsUpdate = true;
+          }
         });
+
+        // Track hair mesh instances for live style switching
+        if (child.name === 'Object_56') hairMeshesRef.current.undercutScalp = child as THREE.Mesh;
+        if (child.name === 'Object_57') hairMeshesRef.current.undercutHair = child as THREE.Mesh;
+        if (child.name === 'Object_59') hairMeshesRef.current.samuraiBun = child as THREE.Mesh;
+        if (child.name === 'Object_61') hairMeshesRef.current.halfUpHair = child as THREE.Mesh;
+        if (child.name === 'Object_62') hairMeshesRef.current.halfUpScalp = child as THREE.Mesh;
       }
 
       // 3. Identify Head and Neck bones
@@ -366,6 +646,7 @@ function Model({
         if (name.includes('Head') || name.toLowerCase().includes('head')) {
           foundBones.head = bone;
           baseRotations.head = bone.rotation.clone();
+          setHeadBone(bone);
         } else if (name.includes('L_Eye') || name.toLowerCase().includes('lefteye') || name.includes('Eye_L')) {
           foundBones.leftEye = bone;
           bone.position.set(7.71875, 7.64453125, 3.33984375);
@@ -391,6 +672,59 @@ function Model({
       }
     });
 
+    // 4. Create lush multi-layer hair strands for Object_61 (Half_up_Hair)
+    const baseHalfUpHair = hairMeshesRef.current.halfUpHair as THREE.SkinnedMesh | undefined;
+    if (baseHalfUpHair && baseHalfUpHair.geometry && baseHalfUpHair.parent) {
+      const parent = baseHalfUpHair.parent;
+
+      const createHairLayer = (
+        name: string,
+        normalOffset: number,
+        shiftX: number,
+        shiftY: number,
+        shiftZ: number
+      ) => {
+        const clonedGeo = baseHalfUpHair.geometry.clone();
+        const pos = clonedGeo.attributes.position;
+        const norm = clonedGeo.attributes.normal;
+        if (pos && norm) {
+          for (let i = 0; i < pos.count; i++) {
+            const nx = norm.getX(i);
+            const ny = norm.getY(i);
+            const nz = norm.getZ(i);
+            pos.setXYZ(
+              i,
+              pos.getX(i) + nx * normalOffset + shiftX,
+              pos.getY(i) + ny * normalOffset + shiftY,
+              pos.getZ(i) + nz * normalOffset + shiftZ
+            );
+          }
+          pos.needsUpdate = true;
+          clonedGeo.computeVertexNormals();
+        }
+
+        const layerMesh = new THREE.SkinnedMesh(clonedGeo, baseHalfUpHair.material);
+        layerMesh.bind(baseHalfUpHair.skeleton, baseHalfUpHair.bindMatrix);
+        layerMesh.name = name;
+        layerMesh.frustumCulled = true;
+        layerMesh.renderOrder = 2;
+        layerMesh.castShadow = false;
+        return layerMesh;
+      };
+
+      if (!parent.getObjectByName('Half_up_Hair_Extra_1')) {
+        const extra1 = createHairLayer('Half_up_Hair_Extra_1', 0.005, 0.003, 0.001, -0.002);
+        parent.add(extra1);
+        hairMeshesRef.current.hairExtra1 = extra1;
+      }
+
+      if (!parent.getObjectByName('Half_up_Hair_Extra_2')) {
+        const extra2 = createHairLayer('Half_up_Hair_Extra_2', -0.004, -0.003, -0.001, 0.002);
+        parent.add(extra2);
+        hairMeshesRef.current.hairExtra2 = extra2;
+      }
+    }
+
     bonesRef.current = foundBones;
     baseRotationsRef.current = baseRotations;
 
@@ -398,6 +732,30 @@ function Model({
       actions[names[0]]?.reset().play();
     }
   }, [actions, names, scene, neckEmissiveMap]);
+
+  // Default original model hair
+  useEffect(() => {
+    const { undercutScalp, undercutHair, samuraiBun, halfUpHair, halfUpScalp, hairExtra1, hairExtra2 } = hairMeshesRef.current;
+    if (halfUpHair) {
+      halfUpHair.visible = true;
+      halfUpHair.renderOrder = 2;
+    }
+    if (halfUpScalp) {
+      halfUpScalp.visible = true;
+      halfUpScalp.renderOrder = 1;
+    }
+    if (hairExtra1) {
+      hairExtra1.visible = true;
+      hairExtra1.renderOrder = 2;
+    }
+    if (hairExtra2) {
+      hairExtra2.visible = true;
+      hairExtra2.renderOrder = 2;
+    }
+    if (samuraiBun) samuraiBun.visible = false;
+    if (undercutScalp) undercutScalp.visible = false;
+    if (undercutHair) undercutHair.visible = false;
+  }, [hairstyle]);
 
   // Real-time Face & Head Mouse Tracking
   useFrame((state, delta) => {
@@ -492,7 +850,7 @@ function Model({
     }
 
     if (group.current) {
-      group.current.position.set(0, -4.15, 0);
+      group.current.position.set(0, -4.26, 0);
       group.current.rotation.set(0, 0, 0);
     }
   });
@@ -500,12 +858,13 @@ function Model({
   return (
     <group
       ref={group}
-      position={[0, -4.15, 0]}
+      position={[0, -4.26, 0]}
       rotation={[0, 0, 0]}
-      scale={1.5}
+      scale={1.46}
       dispose={null}
     >
       <primitive object={scene} />
+      {headBone && <CyberEarphone headBone={headBone} />}
     </group>
   );
 }
@@ -514,17 +873,21 @@ function Model({
 useGLTF.preload('/models/mia.glb', true, true, (loader) => {
   loader.setMeshoptDecoder(MeshoptDecoder);
 });
-useTexture.preload('/models/neck_emissive.png');
+useTexture.preload('/models/neck_emissive.png?v=7');
+useTexture.preload('/models/head_diffuse.png?v=6');
+useTexture.preload('/models/head_normal.png?v=6');
 
 export function MiaModel({ className = '', showStatusLabel = true }: MiaModelProps) {
   const [mounted, setMounted] = useState(false);
   const [mouseCoords, setMouseCoords] = useState({ x: 0, y: 0 });
+  const [hairstyle, setHairstyle] = useState<HairstyleId>('flowing');
   const { lenis } = useSmoothScroll();
   const { setIsSiteLoading } = useTheme();
 
   // Real Three.js asset loading tracker
   const { active, progress: realProgress, item, loaded, total } = useProgress();
   const [hasCompletedInitialLoad, setHasCompletedInitialLoad] = useState(false);
+  const [buildProgress, setBuildProgress] = useState(0);
 
   // Manual replay state
   const [manualTrigger, setManualTrigger] = useState(false);
@@ -538,20 +901,39 @@ export function MiaModel({ className = '', showStatusLabel = true }: MiaModelPro
     setMounted(true);
   }, []);
 
-  // Check if model was already cached on mount
+  // 1. If model is already cached / fully loaded on mount, immediately auto-skip!
   useEffect(() => {
-    if (!active && realProgress === 100) {
+    if (!active && realProgress === 100 && !manualTrigger) {
       setHasCompletedInitialLoad(true);
       setIsSiteLoading(false);
     }
-  }, [active, realProgress, setIsSiteLoading]);
+  }, [active, realProgress, manualTrigger, setIsSiteLoading]);
 
-  // Handle manual replay simulation (smooth 0 to 100 progress over ~1.8s)
+  // 2. While model is downloading: show animation. The instant full model loads, auto-skip immediately!
+  useEffect(() => {
+    if (hasCompletedInitialLoad && !manualTrigger) return;
+
+    if (!active && realProgress === 100) {
+      // Model is fully loaded! Auto-skip to real model immediately!
+      setBuildProgress(100);
+      setHasCompletedInitialLoad(true);
+      setIsSiteLoading(false);
+      setShowFlare(true);
+      const flareTimer = setTimeout(() => {
+        setShowFlare(false);
+      }, 700);
+      return () => clearTimeout(flareTimer);
+    } else {
+      setBuildProgress(realProgress);
+    }
+  }, [active, realProgress, hasCompletedInitialLoad, manualTrigger, setIsSiteLoading]);
+
+  // Handle manual replay simulation
   useEffect(() => {
     if (!manualTrigger) return;
     let cur = 0;
     const interval = setInterval(() => {
-      cur += 4;
+      cur += 2.0;
       if (cur >= 100) {
         cur = 100;
         setManualProgress(100);
@@ -559,7 +941,7 @@ export function MiaModel({ className = '', showStatusLabel = true }: MiaModelPro
       } else {
         setManualProgress(cur);
       }
-    }, 45);
+    }, 40);
 
     return () => clearInterval(interval);
   }, [manualTrigger]);
@@ -572,6 +954,8 @@ export function MiaModel({ className = '', showStatusLabel = true }: MiaModelPro
   };
 
   const handleSkip = () => {
+    setBuildProgress(100);
+    setManualProgress(100);
     setHasCompletedInitialLoad(true);
     setManualTrigger(false);
     setIsShaking(false);
@@ -589,10 +973,8 @@ export function MiaModel({ className = '', showStatusLabel = true }: MiaModelPro
     }, 850);
   };
 
-  // Only show the full-screen terminal if model is ACTUALLY loading or manually re-triggered
-  const isActualLoading = !hasCompletedInitialLoad && (active || realProgress < 100);
-  const shouldShowLoader = isActualLoading || manualTrigger;
-  const currentProgress = manualTrigger ? manualProgress : realProgress;
+  const shouldShowLoader = !hasCompletedInitialLoad || manualTrigger;
+  const currentProgress = manualTrigger ? manualProgress : buildProgress;
 
   // Synchronize site loading state to hide navbar while loading
   useEffect(() => {
@@ -678,11 +1060,13 @@ export function MiaModel({ className = '', showStatusLabel = true }: MiaModelPro
       <div className="absolute inset-0 w-full h-full z-10">
         <Canvas
           dpr={[1, 1.75]} // 4K retina clamping for locked 60+ FPS
-          camera={{ position: [0, 0.05, 1.85], fov: 36 }}
+          camera={{ position: [0, 0.08, 1.92], fov: 35 }}
+          flat={false}
           gl={{
             antialias: true,
             alpha: true,
             stencil: false,
+            depth: true,
             powerPreference: 'high-performance',
             toneMapping: THREE.ACESFilmicToneMapping,
             toneMappingExposure: 1.16,
@@ -698,21 +1082,32 @@ export function MiaModel({ className = '', showStatusLabel = true }: MiaModelPro
           {/* Realistic PBR Environment Reflections */}
           <Environment preset="city" environmentIntensity={0.4} />
 
+          {/* 3D Holographic Wireframe Model Builder (Active during loading & replay) */}
+          {shouldShowLoader && (
+            <HologramModelBuilder
+              progress={currentProgress}
+              isComplete={currentProgress >= 100}
+            />
+          )}
+
           {/* 4K Model with Face/Head Tracking & Electric Neck Glow */}
           <Suspense fallback={null}>
-            <Model
-              onPointerUpdate={(x, y) => {
-                setMouseCoords({
-                  x: Number(x.toFixed(2)),
-                  y: Number(y.toFixed(2)),
-                });
-              }}
-            />
+            <group visible={!shouldShowLoader}>
+              <Model
+                hairstyle={hairstyle}
+                onPointerUpdate={(x, y) => {
+                  setMouseCoords({
+                    x: Number(x.toFixed(2)),
+                    y: Number(y.toFixed(2)),
+                  });
+                }}
+              />
+            </group>
           </Suspense>
 
           {/* OrbitControls */}
           <OrbitControls
-            target={[0, 0.05, 0]}
+            target={[0, 0.08, 0]}
             enableZoom={false}
             enablePan={false}
             minPolarAngle={Math.PI / 2.5}
@@ -763,7 +1158,7 @@ export function MiaModel({ className = '', showStatusLabel = true }: MiaModelPro
         </div>
       </div>
 
-      {/* Interactive Control Hint Pill & Re-trigger Button */}
+      {/* Interactive Control Hint Pill, Hairstyle Selector & Re-trigger Button */}
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col sm:flex-row items-center gap-3 select-none z-20">
         <div className="flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-[#0D1527]/85 border border-[#38BDF8]/40 backdrop-blur-md text-[11px] font-mono text-[#8AE4FA] shadow-[0_0_25px_rgba(56,189,248,0.25)] pointer-events-none">
           <span className="w-1.5 h-1.5 rounded-full bg-[#38BDF8] animate-ping" />

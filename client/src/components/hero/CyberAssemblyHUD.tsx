@@ -15,484 +15,310 @@ export interface CyberAssemblyHUDProps {
   onSkip: () => void;
 }
 
-interface CodeLine {
-  num: number;
-  tokens: { text: string; color: string }[];
-}
-
-// Authentic Cyberpunk / Three.js Quantum Assembly Code
-const CODE_FILE: CodeLine[] = [
-  {
-    num: 1,
-    tokens: [
-      { text: '// MIA_CYBORG_V4K // NEURAL 3D RUNTIME ENGINE', color: '#64748B' },
-    ],
-  },
-  {
-    num: 2,
-    tokens: [
-      { text: 'import ', color: '#F472B6' },
-      { text: '{ WebGLRenderer, Scene, PerspectiveCamera } ', color: '#38BDF8' },
-      { text: 'from ', color: '#F472B6' },
-      { text: '"three";', color: '#34D399' },
-    ],
-  },
-  {
-    num: 3,
-    tokens: [
-      { text: 'import ', color: '#F472B6' },
-      { text: '{ MeshoptDecoder } ', color: '#38BDF8' },
-      { text: 'from ', color: '#F472B6' },
-      { text: '"three/addons/libs/meshopt_decoder.js";', color: '#34D399' },
-    ],
-  },
-  {
-    num: 4,
-    tokens: [
-      { text: 'import ', color: '#F472B6' },
-      { text: '{ compileElectricNeckShader } ', color: '#38BDF8' },
-      { text: 'from ', color: '#F472B6' },
-      { text: '"@cyber/shaders/neon_circuit";', color: '#34D399' },
-    ],
-  },
-  {
-    num: 5,
-    tokens: [{ text: '', color: '' }],
-  },
-  {
-    num: 6,
-    tokens: [
-      { text: 'const ', color: '#F472B6' },
-      { text: 'CYBER_CONFIG ', color: '#FBBF24' },
-      { text: '= {', color: '#FFFFFF' },
-    ],
-  },
-  {
-    num: 7,
-    tokens: [
-      { text: '  targetMesh: ', color: '#94A3B8' },
-      { text: '"/models/mia.glb"', color: '#34D399' },
-      { text: ',', color: '#FFFFFF' },
-    ],
-  },
-  {
-    num: 8,
-    tokens: [
-      { text: '  resolution: ', color: '#94A3B8' },
-      { text: '"4K_ULTRA_HD_60FPS"', color: '#34D399' },
-      { text: ',', color: '#FFFFFF' },
-    ],
-  },
-  {
-    num: 9,
-    tokens: [
-      { text: '  emissiveCircuit: ', color: '#94A3B8' },
-      { text: '"/models/neck_emissive.png"', color: '#34D399' },
-      { text: ',', color: '#FFFFFF' },
-    ],
-  },
-  {
-    num: 10,
-    tokens: [
-      { text: '  vramAlloc: ', color: '#94A3B8' },
-      { text: '"16.0_GB_FORCE_VRAM"', color: '#34D399' },
-      { text: ',', color: '#FFFFFF' },
-    ],
-  },
-  {
-    num: 11,
-    tokens: [
-      { text: '  biometrics: ', color: '#94A3B8' },
-      { text: '"REALTIME_MOUSE_HEAD_FOLLOW"', color: '#34D399' },
-    ],
-  },
-  {
-    num: 12,
-    tokens: [{ text: '};', color: '#FFFFFF' }],
-  },
-  {
-    num: 13,
-    tokens: [{ text: '', color: '' }],
-  },
-  {
-    num: 14,
-    tokens: [
-      { text: 'async function ', color: '#F472B6' },
-      { text: 'bootQuantumPipeline', color: '#60A5FA' },
-      { text: '() {', color: '#FFFFFF' },
-    ],
-  },
-  {
-    num: 15,
-    tokens: [
-      { text: '  console.', color: '#94A3B8' },
-      { text: 'log', color: '#60A5FA' },
-      { text: '("[KERNEL] Booting WebGL2 hardware pipeline...");', color: '#34D399' },
-    ],
-  },
-  {
-    num: 16,
-    tokens: [
-      { text: '  const ', color: '#F472B6' },
-      { text: 'meshBuffer ', color: '#E2E8F0' },
-      { text: '= ', color: '#F472B6' },
-      { text: 'await ', color: '#F472B6' },
-      { text: 'MeshoptDecoder.', color: '#38BDF8' },
-      { text: 'decodeGeometry', color: '#60A5FA' },
-      { text: '(CYBER_CONFIG.targetMesh);', color: '#E2E8F0' },
-    ],
-  },
-  {
-    num: 17,
-    tokens: [
-      { text: '  const ', color: '#F472B6' },
-      { text: 'neckShader ', color: '#E2E8F0' },
-      { text: '= ', color: '#F472B6' },
-      { text: 'compileElectricNeckShader', color: '#60A5FA' },
-      { text: '({ cycle: 3.0, color: "#00B8FF" });', color: '#E2E8F0' },
-    ],
-  },
-  {
-    num: 18,
-    tokens: [
-      { text: '  ', color: '' },
-      { text: '// Overclocking GPU voltage for 4K ray tracing...', color: '#64748B' },
-    ],
-  },
-  {
-    num: 19,
-    tokens: [
-      { text: '  sysctl.', color: '#94A3B8' },
-      { text: 'set', color: '#60A5FA' },
-      { text: '("kernel.neural_overclock", ', color: '#E2E8F0' },
-      { text: '"VOLTAGE_1.21_GW"', color: '#34D399' },
-      { text: ');', color: '#E2E8F0' },
-    ],
-  },
-  {
-    num: 20,
-    tokens: [
-      { text: '  return ', color: '#F472B6' },
-      { text: 'mountScene', color: '#60A5FA' },
-      { text: '(meshBuffer, neckShader);', color: '#E2E8F0' },
-    ],
-  },
-  {
-    num: 21,
-    tokens: [{ text: '}', color: '#FFFFFF' }],
-  },
-  {
-    num: 22,
-    tokens: [{ text: '', color: '' }],
-  },
-  {
-    num: 23,
-    tokens: [
-      { text: '// EXECUTE PIPELINE WITH ZERO THROTTLING', color: '#F59E0B' },
-    ],
-  },
-  {
-    num: 24,
-    tokens: [
-      { text: 'bootQuantumPipeline().', color: '#E2E8F0' },
-      { text: 'catch', color: '#F472B6' },
-      { text: '(err => ', color: '#E2E8F0' },
-      { text: 'panic', color: '#EF4444' },
-      { text: '(0xDEADBEEF));', color: '#EF4444' },
-    ],
-  },
-];
-
-// Terminal execution logs
-interface TerminalMsg {
-  type: 'info' | 'success' | 'warn' | 'fatal';
+interface LogEntry {
   text: string;
+  type: 'info' | 'success' | 'warn' | 'cyan';
 }
 
+// -------------------------------------------------------------
+// DYNAMIC HOLOGRAPHIC WAVEFORM PROGRESS BAR
+// -------------------------------------------------------------
+function HolographicWaveformBar({ progress }: { progress: number }) {
+  const [phase, setPhase] = useState(0);
+
+  useEffect(() => {
+    let animId: number;
+    let t = 0;
+    const loop = () => {
+      t += 0.055;
+      setPhase(t);
+      animId = requestAnimationFrame(loop);
+    };
+    animId = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(animId);
+  }, []);
+
+  const width = 600;
+  const height = 44;
+  const midY = height / 2;
+  const clampedProgress = Math.min(100, Math.max(2, progress));
+  const activeWidth = (width * clampedProgress) / 100;
+
+  // Build the harmonic wave paths
+  const step = 3;
+  let bgPath = `M 0 ${midY}`;
+  let activePath = `M 0 ${midY}`;
+  let echoPath = `M 0 ${midY}`;
+  let headX = 0;
+  let headY = midY;
+
+  for (let x = 0; x <= width; x += step) {
+    const env = Math.sin((x / width) * Math.PI) * 0.35 + 0.65;
+    const w1 = Math.sin(x * 0.042 - phase * 2.2) * 10 * env;
+    const w2 = Math.sin(x * 0.085 + phase * 1.5) * 3.5 * env;
+    const y = midY + w1 + w2;
+
+    const echoY = midY + Math.sin(x * 0.038 - phase * 1.6 + 1.2) * 8 * env;
+
+    bgPath += ` L ${x} ${y.toFixed(2)}`;
+    echoPath += ` L ${x} ${echoY.toFixed(2)}`;
+
+    if (x <= activeWidth) {
+      activePath += ` L ${x} ${y.toFixed(2)}`;
+      headX = x;
+      headY = y;
+    }
+  }
+
+  const activeFillPath = `${activePath} L ${headX} ${height} L 0 ${height} Z`;
+
+  return (
+    <div className="relative w-full rounded-xl bg-[#091124]/85 border border-[#38BDF8]/40 p-2 sm:p-2.5 backdrop-blur-md shadow-[0_0_25px_rgba(56,189,248,0.2)]">
+      {/* Corner tech brackets */}
+      <span className="absolute -top-1 -left-1 w-2.5 h-2.5 border-t-2 border-l-2 border-[#00F0FF]" />
+      <span className="absolute -top-1 -right-1 w-2.5 h-2.5 border-t-2 border-r-2 border-[#00F0FF]" />
+      <span className="absolute -bottom-1 -left-1 w-2.5 h-2.5 border-b-2 border-l-2 border-[#00F0FF]" />
+      <span className="absolute -bottom-1 -right-1 w-2.5 h-2.5 border-b-2 border-r-2 border-[#00F0FF]" />
+
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        className="w-full h-10 sm:h-12 overflow-visible"
+        preserveAspectRatio="none"
+      >
+        <defs>
+          {/* Neon Glow Filter */}
+          <filter id="neon-glow" x="-20%" y="-40%" width="140%" height="180%">
+            <feGaussianBlur stdDeviation="2.5" result="glow" />
+            <feMerge>
+              <feMergeNode in="glow" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+
+          {/* Electric Wave Gradient */}
+          <linearGradient id="wave-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#8B5CF6" />
+            <stop offset="50%" stopColor="#38BDF8" />
+            <stop offset="100%" stopColor="#00F0FF" />
+          </linearGradient>
+
+          {/* Under-wave Energy Fill Gradient */}
+          <linearGradient id="wave-fill-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#00F0FF" stopOpacity="0.22" />
+            <stop offset="100%" stopColor="#00F0FF" stopOpacity="0.0" />
+          </linearGradient>
+        </defs>
+
+        {/* Center Guide Baseline */}
+        <line
+          x1="0"
+          y1={midY}
+          x2={width}
+          y2={midY}
+          stroke="rgba(56,189,248,0.12)"
+          strokeDasharray="4 6"
+          strokeWidth="1"
+        />
+
+        {/* Inactive Carrier Wave (Dashed Blueprint Wave) */}
+        <path
+          d={bgPath}
+          fill="none"
+          stroke="rgba(56, 189, 248, 0.2)"
+          strokeWidth="1.2"
+          strokeDasharray="4 4"
+        />
+
+        {/* Active Wave Soft Gradient Underfill */}
+        <path
+          d={activeFillPath}
+          fill="url(#wave-fill-gradient)"
+        />
+
+        {/* Secondary Harmonic Echo Wave */}
+        <path
+          d={echoPath}
+          fill="none"
+          stroke="#A855F7"
+          strokeWidth="1.2"
+          opacity="0.35"
+        />
+
+        {/* Primary Active Electric Wave */}
+        <path
+          d={activePath}
+          fill="none"
+          stroke="url(#wave-gradient)"
+          strokeWidth="2.8"
+          strokeLinecap="round"
+          filter="url(#neon-glow)"
+        />
+
+        {/* Leading Quantum Laser Spark Node */}
+        {clampedProgress > 0 && (
+          <g transform={`translate(${headX}, ${headY})`}>
+            {/* Outer expanding ripple */}
+            <circle r="7" fill="none" stroke="#00F0FF" strokeWidth="1.5" opacity="0.75" />
+            {/* Core glow halo */}
+            <circle r="4" fill="#00F0FF" opacity="0.9" />
+            {/* White-hot center */}
+            <circle r="2" fill="#FFFFFF" />
+            {/* Vertical drop laser scanline */}
+            <line x1="0" y1="-7" x2="0" y2="7" stroke="#FFFFFF" strokeWidth="1.5" opacity="0.9" />
+          </g>
+        )}
+      </svg>
+    </div>
+  );
+}
+
+// -------------------------------------------------------------
+// MAIN CYBER ASSEMBLY HUD OVERLAY
+// -------------------------------------------------------------
 export default function CyberAssemblyHUD({
   progress = 0,
   item = '',
   loaded = 0,
   total = 0,
-  isManualTrigger = false,
   onComplete,
   onShake,
   onSkip,
 }: CyberAssemblyHUDProps) {
   const [mounted, setMounted] = useState(false);
-  const [phase, setPhase] = useState<'CODING' | 'CRASHING' | 'REBOOTING'>('CODING');
-  const [termLogs, setTermLogs] = useState<TerminalMsg[]>([
-    { type: 'info', text: '➜ [COMPILER] ts-node src/quantum_core.ts --mode=production' },
-    { type: 'info', text: '➜ [SYS] WebGL2 context initialized @ 4K Ultra-HD' },
+  const [logs, setLogs] = useState<LogEntry[]>([
+    { text: 'INIT // WebGL2 4K Quantum Engine', type: 'info' },
+    { text: 'SYS // Camera & Light Rig Calibrated', type: 'success' },
   ]);
+  const [phase, setPhase] = useState<'BUILDING' | 'SYNTHESIZED' | 'ONLINE'>('BUILDING');
+  const loggedMilestones = useRef<Set<number>>(new Set());
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  const editorScrollRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const loggedMilestones = useRef<Set<number>>(new Set());
-
-  // Matrix Digital Rain Canvas Background
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    let animId: number;
-    let width = (canvas.width = window.innerWidth);
-    let height = (canvas.height = window.innerHeight);
-
-    const handleResize = () => {
-      if (!canvas) return;
-      width = canvas.width = window.innerWidth;
-      height = canvas.height = window.innerHeight;
-    };
-    window.addEventListener('resize', handleResize);
-
-    const chars = '0123456789ABCDEF<>{}/*=+~_[]!#';
-    const fontSize = 14;
-    const columns = Math.floor(width / fontSize);
-    const drops = new Array(columns).fill(1);
-
-    const drawMatrix = () => {
-      ctx.fillStyle = 'rgba(2, 5, 18, 0.15)';
-      ctx.fillRect(0, 0, width, height);
-
-      ctx.fillStyle = phase === 'CRASHING' ? 'rgba(239, 68, 68, 0.4)' : 'rgba(0, 240, 255, 0.35)';
-      ctx.font = `${fontSize}px monospace`;
-
-      for (let i = 0; i < drops.length; i++) {
-        const char = chars[Math.floor(Math.random() * chars.length)];
-        ctx.fillText(char, i * fontSize, drops[i] * fontSize);
-
-        if (drops[i] * fontSize > height && Math.random() > 0.975) {
-          drops[i] = 0;
-        }
-        drops[i]++;
-      }
-      animId = requestAnimationFrame(drawMatrix);
-    };
-
-    animId = requestAnimationFrame(drawMatrix);
-
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      cancelAnimationFrame(animId);
-    };
-  }, [phase]);
-
-  // Map progress to visible code lines
-  const visibleLinesCount = Math.max(
-    4,
-    Math.min(CODE_FILE.length, Math.floor((progress / 95) * CODE_FILE.length) + 3)
-  );
-
-  // Auto-scroll code editor
-  useEffect(() => {
-    if (editorScrollRef.current) {
-      editorScrollRef.current.scrollTop = editorScrollRef.current.scrollHeight;
-    }
-  }, [visibleLinesCount]);
-
-  // Terminal compiler logs advancing with progress
+  // Update real-time system logs as progress advances
   useEffect(() => {
     const p = Math.floor(progress);
 
-    const addMsg = (type: 'info' | 'success' | 'warn' | 'fatal', text: string) => {
-      setTermLogs((prev) => [...prev, { type, text }]);
+    const addLog = (text: string, type: 'info' | 'success' | 'warn' | 'cyan') => {
+      setLogs((prev) => [...prev.slice(-4), { text, type }]);
     };
 
-    if (p >= 20 && !loggedMilestones.current.has(20)) {
-      loggedMilestones.current.add(20);
-      addMsg('info', `➜ [FETCH] Fetching 3D assets: ${item ? item.split('/').pop() : 'mia.glb'} (${loaded}/${Math.max(1, total)})`);
+    if (p >= 15 && !loggedMilestones.current.has(15)) {
+      loggedMilestones.current.add(15);
+      addLog('LATTICE // Constructing nanotech base rings', 'cyan');
+    }
+    if (p >= 35 && !loggedMilestones.current.has(35)) {
+      loggedMilestones.current.add(35);
+      addLog('CORE // Initializing quantum reactor & conduits', 'info');
+    }
+    if (p >= 55 && !loggedMilestones.current.has(55)) {
+      loggedMilestones.current.add(55);
+      addLog('CIRCUIT // Synthesizing forehead & neck electric lines', 'cyan');
+    }
+    if (p >= 75 && !loggedMilestones.current.has(75)) {
+      loggedMilestones.current.add(75);
+      addLog('OPTICS // Ocular tracking & cyber earphone online', 'success');
+    }
+    if (p >= 92 && !loggedMilestones.current.has(92)) {
+      loggedMilestones.current.add(92);
+      addLog('TEXTURE // 4K PBR diffuse & normal maps bound', 'success');
     }
 
-    if (p >= 40 && !loggedMilestones.current.has(40)) {
-      loggedMilestones.current.add(40);
-      addMsg('success', '✓ [DECODE] Meshopt geometry buffers decompressed [36,000 vertices]');
-    }
-
-    if (p >= 65 && !loggedMilestones.current.has(65)) {
-      loggedMilestones.current.add(65);
-      addMsg('success', '✓ [SHADERS] Electric neon neck circuit compiled: neck_emissive.png');
-    }
-
-    if (p >= 85 && !loggedMilestones.current.has(85)) {
-      loggedMilestones.current.add(85);
-      addMsg('warn', '⚠ [VOLTAGE] Core temperature climbing: 1,420°C [COOLING FAILURE]');
-    }
-
-    // Trigger Crash at 100%
-    if (p >= 100 && phase === 'CODING' && !loggedMilestones.current.has(100)) {
+    if (p >= 100 && phase === 'BUILDING' && !loggedMilestones.current.has(100)) {
       loggedMilestones.current.add(100);
-      addMsg('fatal', '🚨 [FATAL EXCEPTION] 0xDEADBEEF: SERVER CORE OVERLOAD!');
-      addMsg('fatal', '💥 [CRASH] SYSTEM CORE MELTDOWN // HIGH VOLTAGE DISCHARGE 💥');
-
-      setPhase('CRASHING');
-      onShake(true);
-
-      const crashTimer = setTimeout(() => {
-        onShake(false);
-        setPhase('REBOOTING');
-
-        const rebootTimer = setTimeout(() => {
-          onComplete();
-        }, 500);
-
-        return () => clearTimeout(rebootTimer);
-      }, 750);
-
-      return () => clearTimeout(crashTimer);
+      setPhase('ONLINE');
+      onComplete();
     }
-  }, [progress, item, loaded, total, phase, onShake, onComplete]);
+  }, [progress, phase, onShake, onComplete]);
 
-  const isCrashing = phase === 'CRASHING';
-  const isRebooting = phase === 'REBOOTING';
+  // Stage description based on percentage
+  const stageInfo = (() => {
+    if (progress < 25) return { stage: 'STAGE 01', title: 'NANITE FRAMEWORK & BASE RINGS' };
+    if (progress < 50) return { stage: 'STAGE 02', title: 'QUANTUM CORE & HYDRAULIC CONDUITS' };
+    if (progress < 75) return { stage: 'STAGE 03', title: 'NEON CIRCUITS & NEURAL SCHEMATICS' };
+    if (progress < 99) return { stage: 'STAGE 04', title: 'BIOMETRIC CALIBRATION & 4K SHADERS' };
+    return { stage: 'STAGE 05', title: 'SYNTHESIS COMPLETE // DEPLOYING AVATAR' };
+  })();
 
   if (!mounted || typeof document === 'undefined') return null;
 
   return createPortal(
     <AnimatePresence>
-      {!isRebooting && (
+      {phase !== 'ONLINE' && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          exit={{ opacity: 0, scale: 1.02 }}
-          transition={{ duration: 0.35 }}
-          className={`fixed inset-0 z-[9999] w-full h-full flex flex-col justify-between font-mono select-none overflow-hidden transition-colors duration-200 ${
-            isCrashing ? 'bg-[#180306]/95' : 'bg-[#030712]/95'
-          } backdrop-blur-3xl`}
+          exit={{ opacity: 0, scale: 1.03 }}
+          transition={{ duration: 0.45, ease: 'easeOut' }}
+          className="fixed inset-0 z-[9999] w-full h-full flex flex-col justify-between font-mono select-none pointer-events-none overflow-hidden"
         >
-          {/* Matrix Digital Rain Canvas Background */}
-          <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none opacity-30 z-0" />
+          {/* Radial Sci-Fi Vignette */}
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_35%,_rgba(7,10,20,0.65)_70%,_rgba(3,7,18,0.92)_100%)] pointer-events-none" />
 
-          {/* CRT Glitch Scanlines */}
-          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:100%_3px] pointer-events-none opacity-70 animate-scanline-sweep z-10" />
+          {/* CRT Scanlines */}
+          <div className="absolute inset-0 bg-[linear-gradient(rgba(0,240,255,0.015)_1px,transparent_1px)] bg-[size:100%_4px] pointer-events-none opacity-60" />
 
-          {/* Red Alert Glitch Vignette during Crash */}
-          {isCrashing && (
-            <div className="absolute inset-0 pointer-events-none bg-red-900/30 mix-blend-color-dodge animate-pulse z-20" />
-          )}
+          {/* Hologram Grid Overlay on Borders */}
+          <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-[#030712]/90 to-transparent pointer-events-none" />
+          <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#030712]/95 via-[#030712]/80 to-transparent pointer-events-none" />
 
-          {/* 1. TOP VS-CODE / IDE HEADER BAR */}
-          <header
-            className={`relative z-30 px-4 sm:px-6 py-2.5 border-b flex items-center justify-between text-xs transition-colors duration-200 ${
-              isCrashing
-                ? 'bg-red-950/80 border-red-500/50 text-red-300'
-                : 'bg-[#070D1F]/90 border-cyan-500/20 text-[#8AE4FA]'
-            }`}
-          >
-            {/* Left: Window Controls & Active IDE Tabs */}
+          {/* ========================================================= */}
+          {/* 1. TOP FUTURISTIC STATUS BAR                              */}
+          {/* ========================================================= */}
+          <header className="relative z-30 px-4 sm:px-8 pt-5 flex items-center justify-between">
+            {/* Left: Protocol & Stage Indicator */}
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5 mr-2">
-                <span className={`w-3 h-3 rounded-full ${isCrashing ? 'bg-red-500 animate-ping' : 'bg-red-500'}`} />
-                <span className="w-3 h-3 rounded-full bg-yellow-500" />
-                <span className="w-3 h-3 rounded-full bg-emerald-500" />
-              </div>
-
-              {/* IDE Tabs */}
-              <div className="flex items-center gap-1">
-                <div
-                  className={`flex items-center gap-1.5 px-3 py-1 rounded-t-md border-t-2 text-[11px] font-semibold ${
-                    isCrashing
-                      ? 'bg-red-900/40 border-red-500 text-red-200'
-                      : 'bg-[#0E172A] border-cyan-400 text-white shadow-sm'
-                  }`}
-                >
-                  <span className="text-cyan-400 text-[10px]">TS</span>
-                  <span>quantum_core.ts</span>
-                </div>
-                <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 text-[#64748B] text-[11px]">
-                  <span className="text-purple-400 text-[10px]">GLSL</span>
-                  <span>electric_neck.frag</span>
+              <div className="w-2.5 h-2.5 rounded-full bg-[#00F0FF] animate-ping" />
+              <div className="flex flex-col">
+                <span className="text-[10px] sm:text-xs text-[#38BDF8] tracking-widest font-bold">
+                  HOLOGRAPHIC SYNTHESIS PROTOCOL
+                </span>
+                <div className="flex items-center gap-2 text-[9px] sm:text-[11px] text-[#94A3B8]">
+                  <span className="text-[#00F0FF] font-semibold">{stageInfo.stage}:</span>
+                  <span>{stageInfo.title}</span>
                 </div>
               </div>
             </div>
 
-            {/* Right: Real-time Progress Readout & Skip */}
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 text-xs">
-                <span className="text-[#94A3B8] hidden sm:inline">COMPILING:</span>
-                <span className={`font-bold ${isCrashing ? 'text-red-400 animate-pulse' : 'text-cyan-400'}`}>
+            {/* Right: Progress readout & Skip */}
+            <div className="flex items-center gap-3 sm:gap-5">
+              <div className="flex items-baseline gap-1.5 bg-[#0F172A]/80 border border-[#38BDF8]/40 px-3.5 py-1 rounded-full backdrop-blur-md shadow-[0_0_20px_rgba(56,189,248,0.25)]">
+                <span className="text-[10px] text-[#94A3B8] hidden sm:inline">BUILD:</span>
+                <span className="text-base sm:text-lg font-bold text-[#00F0FF] tracking-wider tabular-nums">
                   {Math.min(100, Math.floor(progress))}%
                 </span>
               </div>
 
               <button
                 onClick={onSkip}
-                className="px-2.5 py-0.5 rounded border border-white/20 hover:border-cyan-400 hover:bg-cyan-500/20 text-white/80 hover:text-white text-[10px] uppercase tracking-wider transition-all cursor-pointer"
+                className="pointer-events-auto px-3 sm:px-4 py-1.5 rounded-full bg-[#090D1A]/90 border border-[#38BDF8]/60 hover:border-[#00F0FF] hover:bg-[#38BDF8]/20 transition-all text-[10px] sm:text-[11px] font-bold text-[#38BDF8] hover:text-[#FFFFFF] uppercase tracking-wider cursor-pointer shadow-[0_0_15px_rgba(56,189,248,0.25)] hover:shadow-[0_0_25px_rgba(0,240,255,0.5)]"
               >
-                SKIP ⏭
+                <span>SKIP ⏭</span>
               </button>
             </div>
           </header>
 
-          {/* 2. MAIN CENTER CODE EDITOR (The Real Coding Effect) */}
-          <main className="relative z-30 flex-1 flex flex-col p-3 sm:p-6 overflow-hidden">
-            {/* Editor Window Body */}
-            <div
-              ref={editorScrollRef}
-              className={`flex-1 rounded-xl border p-4 sm:p-6 overflow-y-auto backdrop-blur-xl transition-colors duration-200 shadow-2xl scrollbar-thin scrollbar-thumb-cyan-500/30 ${
-                isCrashing
-                  ? 'bg-red-950/40 border-red-500/60 shadow-[0_0_50px_rgba(239,68,68,0.25)]'
-                  : 'bg-[#020719]/85 border-cyan-500/30 shadow-[0_0_40px_rgba(0,240,255,0.12)]'
-              }`}
-            >
-              {/* Code lines streaming down */}
-              <div className="space-y-1 text-xs sm:text-[13px] leading-relaxed">
-                {CODE_FILE.slice(0, visibleLinesCount).map((line) => (
-                  <div key={line.num} className="flex items-baseline gap-4 group">
-                    {/* Line number */}
-                    <span className="w-8 text-right select-none text-[#475569] group-hover:text-cyan-400 text-xs font-mono">
-                      {line.num}
-                    </span>
-
-                    {/* Syntax Tokens */}
-                    <div className="flex-1 font-mono break-all">
-                      {line.tokens.map((tok, idx) => (
-                        <span key={idx} style={{ color: isCrashing && tok.color !== '#64748B' ? '#F87171' : tok.color }}>
-                          {tok.text}
-                        </span>
-                      ))}
-
-                      {/* Blinking typing cursor on active line */}
-                      {line.num === visibleLinesCount && phase === 'CODING' && (
-                        <span className="inline-block w-2 h-3.5 ml-1 bg-cyan-400 animate-pulse align-middle" />
-                      )}
-                    </div>
-                  </div>
-                ))}
+          {/* ========================================================= */}
+          {/* 2. SIDES: FLOATING COMPACT TELEMETRY PANELS               */}
+          {/* ========================================================= */}
+          <div className="relative z-30 flex-1 flex items-center justify-between px-4 sm:px-8 pointer-events-none">
+            {/* Left: Cyber Console Stream */}
+            <div className="hidden md:flex flex-col gap-2 max-w-[240px] bg-[#070D1F]/75 border border-[#38BDF8]/30 rounded-xl p-3 backdrop-blur-md shadow-[0_0_30px_rgba(56,189,248,0.15)]">
+              <div className="flex items-center justify-between border-b border-white/10 pb-1.5 text-[9px] text-[#38BDF8] font-bold tracking-wider">
+                <span>TERMINAL // ASSEMBLY</span>
+                <span className="text-[#00F0FF] animate-pulse">LIVE</span>
               </div>
-            </div>
-
-            {/* Bottom Integrated Terminal / Compiler Output Pane */}
-            <div
-              className={`mt-3 rounded-lg border p-3 text-xs leading-relaxed max-h-32 sm:max-h-36 overflow-y-auto backdrop-blur-md transition-colors duration-200 ${
-                isCrashing
-                  ? 'bg-red-950/60 border-red-500/60 text-red-200'
-                  : 'bg-[#02091c]/90 border-cyan-500/20 text-[#94A3B8]'
-              }`}
-            >
-              <div className="flex items-center justify-between pb-1 mb-2 border-b border-white/10 text-[10px]">
-                <span className="text-white font-semibold">OUTPUT CONSOLE // TTY_COMPILER</span>
-                <span className="text-cyan-400">NODE v20.17 // TSC 5.6.3</span>
-              </div>
-
-              <div className="space-y-1 text-[11px] sm:text-xs">
-                {termLogs.map((log, i) => (
+              <div className="flex flex-col gap-1 text-[10px] leading-snug">
+                {logs.map((log, idx) => (
                   <div
-                    key={i}
-                    className={`${
-                      log.type === 'fatal'
-                        ? 'text-red-400 font-bold animate-pulse'
-                        : log.type === 'warn'
-                          ? 'text-yellow-400'
-                          : log.type === 'success'
-                            ? 'text-emerald-400 font-medium'
-                            : 'text-[#8AE4FA]'
+                    key={idx}
+                    className={`truncate ${
+                      log.type === 'cyan'
+                        ? 'text-[#00F0FF]'
+                        : log.type === 'success'
+                        ? 'text-[#34D399]'
+                        : 'text-[#94A3B8]'
                     }`}
                   >
                     {log.text}
@@ -500,29 +326,55 @@ export default function CyberAssemblyHUD({
                 ))}
               </div>
             </div>
-          </main>
 
-          {/* 3. BOTTOM STATUS STRIP (VS Code Style) */}
-          <footer
-            className={`relative z-30 px-4 sm:px-6 py-1.5 border-t flex items-center justify-between text-[10px] sm:text-[11px] transition-colors duration-200 ${
-              isCrashing
-                ? 'bg-red-900 border-red-500/50 text-white'
-                : 'bg-[#007ACC] text-white border-blue-400/30'
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <span className="font-bold flex items-center gap-1">
-                <span>⚡</span> {isCrashing ? 'CRASH OVERLOAD' : 'main*'}
-              </span>
-              <span className="hidden sm:inline">0 Errors, 0 Warnings</span>
+            {/* Right: Live Wireframe Metrics */}
+            <div className="hidden md:flex flex-col gap-1.5 max-w-[210px] text-right bg-[#070D1F]/75 border border-[#C084FC]/30 rounded-xl p-3 backdrop-blur-md shadow-[0_0_30px_rgba(192,132,252,0.15)]">
+              <div className="flex items-center justify-between border-b border-white/10 pb-1.5 text-[9px] text-[#C084FC] font-bold tracking-wider">
+                <span className="text-[#C084FC] animate-pulse">4K PBR</span>
+                <span>MODEL SPECS</span>
+              </div>
+              <div className="text-[10px] text-[#94A3B8] flex flex-col gap-0.5">
+                <div>LATTICE: <span className="text-white font-semibold">142K POLYGONS</span></div>
+                <div>CIRCUITRY: <span className="text-[#00F0FF] font-semibold">DUAL-SIDE GLOW</span></div>
+                <div>EARPHONE: <span className="text-[#38BDF8] font-semibold">PLASMA ARC</span></div>
+                <div>FRAME RATE: <span className="text-[#34D399] font-semibold">60+ FPS</span></div>
+              </div>
+            </div>
+          </div>
+
+          {/* ========================================================= */}
+          {/* 3. BOTTOM HOLOGRAPHIC WAVEFORM PROGRESS BAR               */}
+          {/* ========================================================= */}
+          <footer className="relative z-30 px-4 sm:px-12 pb-6 sm:pb-8 flex flex-col items-center gap-3">
+            {/* Hologram Progress Track */}
+            <div className="w-full max-w-xl flex flex-col gap-2">
+              <div className="flex items-center justify-between text-[10px] text-[#8AE4FA] tracking-wider">
+                <span className="flex items-center gap-1.5">
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#00F0FF] animate-ping" />
+                  <span>QUANTUM HARMONIC WAVEFORM</span>
+                </span>
+                <span className="text-[#94A3B8]">
+                  {progress < 100 ? 'SYNTHESIZING...' : 'READY'}
+                </span>
+              </div>
+
+              {/* Animated Holographic Waveform Progress Bar */}
+              <HolographicWaveformBar progress={progress} />
+
+              {/* Milestone Markers */}
+              <div className="flex justify-between px-1 text-[8px] text-[#64748B]">
+                <span>BASE 0%</span>
+                <span>CORE 35%</span>
+                <span>CIRCUITS 65%</span>
+                <span>BIOMETRICS 90%</span>
+                <span>ONLINE 100%</span>
+              </div>
             </div>
 
-            <div className="flex items-center gap-4 text-[10px]">
-              <span>Ln {visibleLinesCount}, Col 42</span>
-              <span>Spaces: 2</span>
-              <span>UTF-8</span>
-              <span className="font-semibold">{isCrashing ? 'KERNEL_CRASH' : 'TypeScript JSX'}</span>
-            </div>
+            {/* Hint Subtitle */}
+            <p className="text-[10px] sm:text-[11px] text-[#94A3B8]/80 text-center tracking-wider">
+              REAL-TIME HOLOGRAPHIC RECONSTRUCTION • PLEASE STAND BY
+            </p>
           </footer>
         </motion.div>
       )}
