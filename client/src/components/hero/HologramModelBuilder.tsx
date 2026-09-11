@@ -221,9 +221,14 @@ export default function HologramModelBuilder({
     currentLaserY.current += (targetLaserY - currentLaserY.current) * 0.14;
 
     if (isDissolvingRef.current) {
-      dissolveProgressRef.current = Math.min(1.0, dissolveProgressRef.current + delta * 2.5);
-      if (dissolveProgressRef.current >= 1.0 && onDissolveFinish) {
-        onDissolveFinish();
+      dissolveProgressRef.current = Math.min(1.0, dissolveProgressRef.current + delta * 2.0);
+      if (dissolveProgressRef.current >= 1.0) {
+        if (groupRef.current) {
+          groupRef.current.visible = false;
+        }
+        if (onDissolveFinish) {
+          onDissolveFinish();
+        }
       }
     }
 
@@ -241,6 +246,10 @@ export default function HologramModelBuilder({
     if (laserGroupRef.current) {
       laserGroupRef.current.position.y = currentLaserY.current;
       laserGroupRef.current.rotation.y = time * 2.0;
+      if (dissolveVal > 0) {
+        const laserScale = 1.0 + dissolveVal * 0.6;
+        laserGroupRef.current.scale.set(laserScale, laserScale, laserScale);
+      }
     }
 
     // Animate sparks
@@ -276,7 +285,14 @@ export default function HologramModelBuilder({
     }
 
     if (groupRef.current) {
-      groupRef.current.position.y = Math.sin(time * 2.0) * 0.012;
+      if (dissolveVal > 0) {
+        const s = 1.0 + dissolveVal * 0.05;
+        groupRef.current.scale.set(s, s, s);
+        groupRef.current.position.y = Math.sin(time * 2.0) * 0.012 + dissolveVal * 0.03;
+      } else {
+        groupRef.current.scale.set(1.0, 1.0, 1.0);
+        groupRef.current.position.y = Math.sin(time * 2.0) * 0.012;
+      }
     }
   });
 
@@ -422,7 +438,6 @@ export default function HologramModelBuilder({
             <meshBasicMaterial color="#8B5CF6" transparent opacity={0.5} side={THREE.DoubleSide} />
           </mesh>
         </group>
-
         {/* Floor Guide Beams */}
         {[-0.45, 0.45].map((x) =>
           [-0.45, 0.45].map((z) => (

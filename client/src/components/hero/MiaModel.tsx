@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useGLTF, useAnimations, OrbitControls, useTexture, Environment, useProgress } from '@react-three/drei';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import NightSkyBackground from './NightSkyBackground';
 import CyberAssemblyHUD from './CyberAssemblyHUD';
 import HologramModelBuilder from './HologramModelBuilder';
@@ -291,20 +291,47 @@ function Model({
     hairExtra2?: THREE.SkinnedMesh;
   }>({});
 
-  // Smooth interpolated angles for head & eye tracking
-  const currentYawRef = useRef(0);
-  const currentPitchRef = useRef(0);
-  const currentRollRef = useRef(0);
+  // Smooth interpolated angles for natural eye gaze tracking
   const currentEyeYawRef = useRef(0);
   const currentEyePitchRef = useRef(0);
+  const pointerTargetRef = useRef({ x: 0, y: 0, isHovered: false });
 
-  // Load GLTF model, custom head beauty diffuse map, smoothed normal map, and neck emissive map
+  // Global mouse tracking: works across the entire viewport and detects mouseleave
+  useEffect(() => {
+    const handlePointerMove = (e: MouseEvent) => {
+      const x = (e.clientX / window.innerWidth) * 2 - 1;
+      const y = -((e.clientY / window.innerHeight) * 2 - 1);
+      pointerTargetRef.current = { x, y, isHovered: true };
+    };
+
+    const handlePointerLeave = () => {
+      pointerTargetRef.current = { x: 0, y: 0, isHovered: false };
+    };
+
+    const handleBlur = () => {
+      pointerTargetRef.current = { x: 0, y: 0, isHovered: false };
+    };
+
+    window.addEventListener('mousemove', handlePointerMove, { passive: true });
+    document.addEventListener('mouseleave', handlePointerLeave);
+    window.addEventListener('blur', handleBlur);
+
+    return () => {
+      window.removeEventListener('mousemove', handlePointerMove);
+      document.removeEventListener('mouseleave', handlePointerLeave);
+      window.removeEventListener('blur', handleBlur);
+    };
+  }, []);
+
+  // Load GLTF model, custom head beauty diffuse map, smoothed normal map, neck emissive map, and eye maps
   const { scene, animations } = useGLTF('/models/mia.glb', true, true, (loader) => {
     loader.setMeshoptDecoder(MeshoptDecoder);
   });
   const neckEmissiveMap = useTexture('/models/neck_emissive.png?v=7');
-  const headDiffuseMap = useTexture('/models/head_diffuse.png?v=6');
+  const headDiffuseMap = useTexture('/models/head_diffuse.png?v=8');
   const headNormalMap = useTexture('/models/head_normal.png?v=6');
+  const eyeDiffuseMap = useTexture('/models/eye_diffuse.png?v=3');
+  const eyeNormalMap = useTexture('/models/eye_normal.png?v=3');
 
   useEffect(() => {
     // Optimized texture setup with GPU-friendly settings
@@ -321,24 +348,32 @@ function Model({
     if (neckEmissiveMap) {
       configureTexture(neckEmissiveMap, THREE.SRGBColorSpace);
     }
-    if (headDiffuseMap) {
-      configureTexture(headDiffuseMap, THREE.SRGBColorSpace);
-      if (skinHeadMatRef.current) {
-        skinHeadMatRef.current.map = headDiffuseMap;
-        skinHeadMatRef.current.needsUpdate = true;
-      }
+    if (eyeDiffuseMap) {
+      configureTexture(eyeDiffuseMap, THREE.SRGBColorSpace);
     }
-    if (headNormalMap) {
-      configureTexture(headNormalMap, THREE.LinearSRGBColorSpace);
-      if (skinHeadMatRef.current) {
-        skinHeadMatRef.current.normalMap = headNormalMap;
-        skinHeadMatRef.current.needsUpdate = true;
-      }
+    if (eyeNormalMap) {
+      configureTexture(eyeNormalMap, THREE.LinearSRGBColorSpace);
     }
-  }, [neckEmissiveMap, headDiffuseMap, headNormalMap]);
+  }, [neckEmissiveMap, eyeDiffuseMap, eyeNormalMap]);
 
-  // Use model animations directly to preserve exact 3D eye socket positions and forward keyframes
-  const { actions, names } = useAnimations(animations, group);
+  const headMeshRef = useRef<THREE.Mesh | null>(null);
+
+  // Filter out morph target eyelid blink tracks and eye bone tracks so eyes stay completely static
+  const filteredAnimations = useMemo(() => {
+    return animations.map((clip) => {
+      const cloned = clip.clone();
+      cloned.tracks = cloned.tracks.filter((track) => {
+        const tname = track.name.toLowerCase();
+        const isEyeTrack = tname.includes('eye');
+        const isMorphTrack = tname.includes('morphtarget') || tname.includes('target_') || tname.includes('weights');
+        return !isEyeTrack && !isMorphTrack;
+      });
+      return cloned;
+    });
+  }, [animations]);
+
+  const { actions, names } = useAnimations(filteredAnimations, group);
+  const activeActionRef = useRef<THREE.AnimationAction | null>(null);
 
   // Setup bones, materials, and crystal-clear eye visibility with frustum culling
   useEffect(() => {
@@ -353,7 +388,7 @@ function Model({
         child.frustumCulled = true;
       }
 
-      // 1. Hide lower body parts not in the photo and remove robotic cyber plates on forehead
+      // 1. Hide lower body parts not in the photo and GLTF eye occlusion meshes
       if (
         childName.includes('leg') ||
         childName.includes('boot') ||
@@ -364,8 +399,18 @@ function Model({
         childName.includes('icosphere') ||
         childName.includes('plane') ||
         childName.includes('occlusion') ||
+        childName.includes('eye_occlusion') ||
         childName.includes('tearline') ||
-        childName.includes('cyberwear_head') ||
+        child.name === 'Object_10' || // Std_Tearline_R
+        child.name === 'Object_11' || // Std_Tearline_L
+        child.name === 'Object_12' || // Std_Eye_Occlusion_R (covers eyeballs in GLTF)
+        child.name === 'Object_13' || // Std_Eye_Occlusion_L (covers eyeballs in GLTF)
+        child.name === '10' ||
+        child.name === '11' ||
+        child.name === '12' ||
+        child.name === '13' ||
+        childName.includes('cyberwear') ||
+        child.name === 'Object_19' ||
         child.name === 'Object_21' ||
         child.name === 'Object_22' ||
         child.name === 'Object_23' ||
@@ -381,7 +426,7 @@ function Model({
         return;
       }
 
-      // 2. Crystal-Clear Eye Materials Fix & Neon Ultra HD Materials
+      // 2. Crystal-Clear Eye Materials & Neon Ultra HD Materials
       if ((child as THREE.Mesh).isMesh) {
         const mesh = child as THREE.Mesh;
         const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
@@ -390,7 +435,7 @@ function Model({
           if (!mat) return;
           const matName = mat.name || '';
 
-          // Hide any lower body materials or eye occlusion blockers
+          // Hide lower body materials & eye occlusion overlays
           if (
             matName.includes('Std_Skin_Leg') ||
             matName.includes('Loose_Biker_Boots') ||
@@ -399,35 +444,62 @@ function Model({
             matName.includes('Suit1') ||
             matName.includes('songbird') ||
             matName.includes('Eye_Occlusion') ||
-            matName.includes('Tearline') ||
-            matName.includes('Occlusion')
+            matName.includes('Tearline')
           ) {
             child.visible = false;
             return;
           }
 
-          // Enhance Ga_Eye (Iris, Pupil, Sclera) - Always 100% visible, opaque and razor sharp
-          if (matName.includes('Ga_Eye') || matName.includes('Eye')) {
+          // 2A. Crystal-Clear Realistic Eyeballs & Irises (Ga_Eye)
+          if (matName.includes('Ga_Eye')) {
             const eyeMat = mat as THREE.MeshStandardMaterial;
-            eyeMat.roughness = 0.06;
+            if (eyeDiffuseMap) {
+              eyeDiffuseMap.colorSpace = THREE.SRGBColorSpace;
+              eyeDiffuseMap.needsUpdate = true;
+              eyeMat.map = eyeDiffuseMap;
+            }
+            if (eyeNormalMap) {
+              eyeNormalMap.colorSpace = THREE.LinearSRGBColorSpace;
+              eyeNormalMap.needsUpdate = true;
+              eyeMat.normalMap = eyeNormalMap;
+            }
+            eyeMat.color = new THREE.Color('#FFFFFF');
+            eyeMat.roughness = 0.08; // Glossy specular reflection on cornea
             eyeMat.metalness = 0.0;
-            eyeMat.depthWrite = true;
-            eyeMat.depthTest = true;
             eyeMat.transparent = false;
             eyeMat.opacity = 1.0;
-            mesh.renderOrder = 0;
+            eyeMat.depthWrite = true;
+            eyeMat.depthTest = true;
+            eyeMat.visible = true;
             eyeMat.needsUpdate = true;
+            mesh.visible = true;
+            mesh.renderOrder = 1;
           }
+
+          // 2B. Ultra-HD Eyelashes (Std_Eyelash)
+          if (matName.includes('Std_Eyelash') || matName.includes('Eyelash')) {
+            const lashMat = mat as THREE.MeshStandardMaterial;
+            lashMat.transparent = true;
+            lashMat.alphaTest = 0.35;
+            lashMat.depthWrite = true;
+            lashMat.depthTest = true;
+            lashMat.side = THREE.DoubleSide;
+            lashMat.roughness = 0.3;
+            lashMat.metalness = 0.05;
+            lashMat.color = new THREE.Color('#0D0F14');
+            if (lashMat.map) {
+              lashMat.map.colorSpace = THREE.SRGBColorSpace;
+              lashMat.map.needsUpdate = true;
+            }
+            lashMat.needsUpdate = true;
+            mesh.visible = true;
+            mesh.renderOrder = 3;
+          }
+
 
           // 2B. Cybernetic Neck Electric Circuit Glowing Material & Shader FX
           if (matName.includes('Std_Skin_Head') || matName.includes('Skin_Head')) {
             const stdMat = mat as THREE.MeshStandardMaterial;
-            if (headDiffuseMap) {
-              stdMat.map = headDiffuseMap;
-            }
-            if (headNormalMap) {
-              stdMat.normalMap = headNormalMap;
-            }
             stdMat.emissiveMap = neckEmissiveMap;
             stdMat.emissive = new THREE.Color('#0088FF');
             stdMat.emissiveIntensity = 2.4;
@@ -512,6 +584,10 @@ function Model({
 
             stdMat.needsUpdate = true;
             skinHeadMatRef.current = stdMat;
+            headMeshRef.current = mesh;
+            if (mesh.morphTargetInfluences) {
+              mesh.morphTargetInfluences.fill(0);
+            }
           }
 
           // Main Cyber Jacket
@@ -566,8 +642,14 @@ function Model({
             stdMat.needsUpdate = true;
           }
 
+          // Cyberwear Head Implants - hide to preserve clean natural face
+          if (matName.includes('Cyberwear_Head') || matName.includes('Cyberwear_Face')) {
+            mesh.visible = false;
+            return;
+          }
+
           // Inner Collar & Trim Details
-          if (matName.includes('Jacket6') || matName.includes('Cyberwear_Head_5')) {
+          if (matName.includes('Jacket6')) {
             const stdMat = mat as THREE.MeshStandardMaterial;
             stdMat.color = new THREE.Color('#0A0E17');
             stdMat.roughness = 0.32;
@@ -647,12 +729,6 @@ function Model({
           foundBones.head = bone;
           baseRotations.head = bone.rotation.clone();
           setHeadBone(bone);
-        } else if (name.includes('L_Eye') || name.toLowerCase().includes('lefteye') || name.includes('Eye_L')) {
-          foundBones.leftEye = bone;
-          bone.position.set(7.71875, 7.64453125, 3.33984375);
-        } else if (name.includes('R_Eye') || name.toLowerCase().includes('righteye') || name.includes('Eye_R')) {
-          foundBones.rightEye = bone;
-          bone.position.set(7.71875, 7.64453125, -3.33984375);
         } else if (name.includes('NeckTwist02') || name.includes('Neck_02')) {
           foundBones.neckUpper = bone;
           baseRotations.neckUpper = bone.rotation.clone();
@@ -668,6 +744,12 @@ function Model({
         } else if (name.includes('NeckTwist01') || name.includes('Neck') || name.toLowerCase().includes('neck')) {
           foundBones.neckLower = bone;
           baseRotations.neckLower = bone.rotation.clone();
+        } else if (name.includes('L_Eye') || name.includes('Eye_048')) {
+          foundBones.leftEye = bone;
+          baseRotations.leftEye = bone.rotation.clone();
+        } else if (name.includes('R_Eye') || name.includes('Eye_047')) {
+          foundBones.rightEye = bone;
+          baseRotations.rightEye = bone.rotation.clone();
         }
       }
     });
@@ -728,10 +810,16 @@ function Model({
     bonesRef.current = foundBones;
     baseRotationsRef.current = baseRotations;
 
-    if (names.length > 0 && actions[names[0]]) {
-      actions[names[0]]?.reset().play();
+    // Play smooth natural walk animation without hand movements to hair/face
+    const targetClip = names[0];
+
+    if (targetClip && actions[targetClip]) {
+      Object.values(actions).forEach((act) => act?.stop());
+      const act = actions[targetClip];
+      act?.reset().fadeIn(0.4).play();
+      activeActionRef.current = act;
     }
-  }, [actions, names, scene, neckEmissiveMap]);
+  }, [actions, names, scene, neckEmissiveMap, eyeDiffuseMap, eyeNormalMap]);
 
   // Default original model hair
   useEffect(() => {
@@ -793,60 +881,70 @@ function Model({
       skinHeadMatRef.current.emissiveIntensity = Math.max(0.02, neonPower * 2.2);
     }
 
-    if (neckLightRef.current) {
-      neckLightRef.current.intensity = Math.max(0.02, neonPower * 3.6);
+    // Ensure eyelids remain open and natural
+    if (headMeshRef.current && headMeshRef.current.morphTargetInfluences) {
+      headMeshRef.current.morphTargetInfluences.fill(0);
     }
 
-    // Head & Neck tracking
-    const targetYaw = pointer.x * 0.45;
-    const targetPitch = -pointer.y * 0.25;
-    const targetRoll = -pointer.x * pointer.y * 0.04;
+    // Seamlessly loop the walk stride section (0.0s - 2.45s) so no hand-to-head movements ever occur
+    if (activeActionRef.current && activeActionRef.current.time >= 2.45) {
+      activeActionRef.current.time = 0.0;
+    }
 
-    currentYawRef.current = THREE.MathUtils.damp(currentYawRef.current, targetYaw, 7.5, delta);
-    currentPitchRef.current = THREE.MathUtils.damp(currentPitchRef.current, targetPitch, 7.5, delta);
-    currentRollRef.current = THREE.MathUtils.damp(currentRollRef.current, targetRoll, 7.5, delta);
+    // -------------------------------------------------------------
+    // ANATOMICALLY REALISTIC MOUSE-FOLLOWING EYE GAZE TRACKING
+    // -------------------------------------------------------------
+    // 1. Calculate normalized cursor position with diagonal radius constraint
+    const { x, y, isHovered } = pointerTargetRef.current;
 
-    // Eye Gaze Tracking: Natural, focused eye movement tracking the mouse cursor
-    const targetEyeYaw = pointer.x * 0.12;
-    const targetEyePitch = -pointer.y * 0.08;
+    if (onPointerUpdate) {
+      onPointerUpdate(isHovered ? x : 0, isHovered ? y : 0);
+    }
 
-    currentEyeYawRef.current = THREE.MathUtils.damp(currentEyeYawRef.current, targetEyeYaw, 10.0, delta);
-    currentEyePitchRef.current = THREE.MathUtils.damp(currentEyePitchRef.current, targetEyePitch, 10.0, delta);
+    let targetEyeYaw = 0.0;
+    let targetEyePitch = 0.0;
 
-    const yaw = currentYawRef.current;
-    const pitch = currentPitchRef.current;
-    const roll = currentRollRef.current;
+    if (isHovered) {
+      const dist = Math.hypot(x, y);
+      const scale = dist > 1.0 ? 1.0 / dist : 1.0;
+      const normX = x * scale;
+      const normY = y * scale;
+
+      // Subtle, anatomically realistic movement limits:
+      // When cursor moves left (normX < 0) -> yaw is negative (looks left)
+      // When cursor moves right (normX > 0) -> yaw is positive (looks right)
+      // When cursor moves upward (normY > 0) -> pitch is negative (looks slightly upward)
+      // When cursor moves downward (normY < 0) -> pitch is positive (looks slightly downward)
+      // Eyeballs stay strictly within natural sclera boundaries (~7.5 deg yaw, ~4.5 deg pitch)
+      targetEyeYaw = normX * 0.13;
+      targetEyePitch = -normY * 0.08;
+    }
+
+    // Fluid, human-like easing/interpolation (no snapping, jitter, or unnatural sudden jumps)
+    currentEyeYawRef.current = THREE.MathUtils.damp(
+      currentEyeYawRef.current,
+      targetEyeYaw,
+      6.5,
+      delta
+    );
+    currentEyePitchRef.current = THREE.MathUtils.damp(
+      currentEyePitchRef.current,
+      targetEyePitch,
+      6.5,
+      delta
+    );
+
     const eyeYaw = currentEyeYawRef.current;
     const eyePitch = currentEyePitchRef.current;
 
     const bones = bonesRef.current;
-    const base = baseRotationsRef.current;
 
-    // Apply relative eye gaze focus on top of the forward-facing animated eye orientation
+    // Static eyes with 0 animation (clean, focused, forward gaze)
     if (bones.leftEye) {
-      bones.leftEye.rotation.y += eyeYaw;
-      bones.leftEye.rotation.x += eyePitch;
+      bones.leftEye.rotation.set(0, 0, 0);
     }
-
     if (bones.rightEye) {
-      bones.rightEye.rotation.y += eyeYaw;
-      bones.rightEye.rotation.x += eyePitch;
-    }
-
-    if (bones.head && base.head) {
-      bones.head.rotation.y = base.head.y + yaw * 0.70;
-      bones.head.rotation.x = base.head.x + pitch * 0.65;
-      bones.head.rotation.z = base.head.z + roll * 0.50;
-    }
-
-    if (bones.neckUpper && base.neckUpper) {
-      bones.neckUpper.rotation.y = base.neckUpper.y + yaw * 0.20;
-      bones.neckUpper.rotation.x = base.neckUpper.x + pitch * 0.20;
-    }
-
-    if (bones.neckLower && base.neckLower) {
-      bones.neckLower.rotation.y = base.neckLower.y + yaw * 0.10;
-      bones.neckLower.rotation.x = base.neckLower.x + pitch * 0.10;
+      bones.rightEye.rotation.set(0, 0, 0);
     }
 
     if (group.current) {
@@ -869,13 +967,15 @@ function Model({
   );
 }
 
-// Preload the GLB model asset and emissive texture
+// Preload the GLB model asset and textures
 useGLTF.preload('/models/mia.glb', true, true, (loader) => {
   loader.setMeshoptDecoder(MeshoptDecoder);
 });
 useTexture.preload('/models/neck_emissive.png?v=7');
-useTexture.preload('/models/head_diffuse.png?v=6');
+useTexture.preload('/models/head_diffuse.png?v=8');
 useTexture.preload('/models/head_normal.png?v=6');
+useTexture.preload('/models/eye_diffuse.png?v=3');
+useTexture.preload('/models/eye_normal.png?v=3');
 
 export function MiaModel({ className = '', showStatusLabel = true }: MiaModelProps) {
   const [mounted, setMounted] = useState(false);
@@ -887,99 +987,164 @@ export function MiaModel({ className = '', showStatusLabel = true }: MiaModelPro
   // Real Three.js asset loading tracker
   const { active, progress: realProgress, item, loaded, total } = useProgress();
   const [hasCompletedInitialLoad, setHasCompletedInitialLoad] = useState(false);
-  const [buildProgress, setBuildProgress] = useState(0);
+
+  // Smooth progress state (0 to 100)
+  const [displayProgress, setDisplayProgress] = useState(0);
+  const targetProgressRef = useRef(0);
+
+  // Hologram & Real Model choreography
+  const [showHologram, setShowHologram] = useState(true);
+  const [isHologramDissolving, setIsHologramDissolving] = useState(false);
+  const [showRealModel, setShowRealModel] = useState(false);
+
+  // HUD visibility for Framer Motion exit animation
+  const [showHUD, setShowHUD] = useState(true);
 
   // Manual replay state
   const [manualTrigger, setManualTrigger] = useState(false);
-  const [manualProgress, setManualProgress] = useState(0);
 
   // Shaking and flare effects
   const [isShaking, setIsShaking] = useState(false);
   const [showFlare, setShowFlare] = useState(false);
+  const isCompletingRef = useRef(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // 1. If model is already cached / fully loaded on mount, immediately auto-skip!
-  useEffect(() => {
-    if (!active && realProgress === 100 && !manualTrigger) {
-      setHasCompletedInitialLoad(true);
-      setIsSiteLoading(false);
-    }
-  }, [active, realProgress, manualTrigger, setIsSiteLoading]);
-
-  // 2. While model is downloading: show animation. The instant full model loads, auto-skip immediately!
+  // 1. Advance targetProgress smoothly
   useEffect(() => {
     if (hasCompletedInitialLoad && !manualTrigger) return;
 
+    if (manualTrigger) {
+      targetProgressRef.current = 0;
+      isCompletingRef.current = false;
+      return;
+    }
+
     if (!active && realProgress === 100) {
-      // Model is fully loaded! Auto-skip to real model immediately!
-      setBuildProgress(100);
-      setHasCompletedInitialLoad(true);
-      setIsSiteLoading(false);
+      targetProgressRef.current = 100;
+    } else {
+      targetProgressRef.current = Math.max(targetProgressRef.current, realProgress);
+    }
+  }, [active, realProgress, hasCompletedInitialLoad, manualTrigger]);
+
+  // 2. 60FPS Fluid Progress Interpolator (Zero chunky jumps, guaranteed smooth ramp)
+  useEffect(() => {
+    if (hasCompletedInitialLoad && !manualTrigger) return;
+
+    let animId: number;
+    let lastTime = performance.now();
+
+    const updateProgress = (now: number) => {
+      const dt = Math.min(0.08, (now - lastTime) / 1000);
+      lastTime = now;
+
+      if (manualTrigger) {
+        targetProgressRef.current = Math.min(100, targetProgressRef.current + dt * 65);
+      } else {
+        // Continuous smooth ramp for guaranteed visual prestige
+        targetProgressRef.current = Math.max(
+          targetProgressRef.current,
+          Math.min(95, targetProgressRef.current + dt * 55)
+        );
+        if (!active && realProgress === 100) {
+          targetProgressRef.current = 100;
+        }
+      }
+
+      setDisplayProgress((prev) => {
+        const target = targetProgressRef.current;
+        if (prev >= 100) return 100;
+
+        const diff = target - prev;
+        if (diff <= 0.25 && target >= 100) {
+          return 100;
+        }
+
+        const step = Math.max(diff * 5.8 * dt, dt * 32);
+        return Math.min(target, prev + step);
+      });
+
+      animId = requestAnimationFrame(updateProgress);
+    };
+
+    animId = requestAnimationFrame(updateProgress);
+    return () => cancelAnimationFrame(animId);
+  }, [hasCompletedInitialLoad, manualTrigger, active, realProgress]);
+
+  // 3. Graceful Completion Sequence once displayProgress hits 100
+  useEffect(() => {
+    if (displayProgress >= 100 && !isCompletingRef.current && (showHUD || manualTrigger)) {
+      isCompletingRef.current = true;
+
+      // Begin hologram quantum dissolve & reveal real 3D model
+      setIsHologramDissolving(true);
+      setShowRealModel(true);
       setShowFlare(true);
+
       const flareTimer = setTimeout(() => {
         setShowFlare(false);
       }, 700);
-      return () => clearTimeout(flareTimer);
-    } else {
-      setBuildProgress(realProgress);
+
+      // Fade out HUD via Framer Motion AnimatePresence
+      const hudTimer = setTimeout(() => {
+        setShowHUD(false);
+      }, 450);
+
+      // Cleanly finalize completion after animations settle
+      const completeTimer = setTimeout(() => {
+        setShowHologram(false);
+        setHasCompletedInitialLoad(true);
+        setManualTrigger(false);
+        setIsSiteLoading(false);
+        setIsShaking(false);
+      }, 950);
+
+      return () => {
+        clearTimeout(flareTimer);
+        clearTimeout(hudTimer);
+        clearTimeout(completeTimer);
+      };
     }
-  }, [active, realProgress, hasCompletedInitialLoad, manualTrigger, setIsSiteLoading]);
-
-  // Handle manual replay simulation
-  useEffect(() => {
-    if (!manualTrigger) return;
-    let cur = 0;
-    const interval = setInterval(() => {
-      cur += 2.0;
-      if (cur >= 100) {
-        cur = 100;
-        setManualProgress(100);
-        clearInterval(interval);
-      } else {
-        setManualProgress(cur);
-      }
-    }, 40);
-
-    return () => clearInterval(interval);
-  }, [manualTrigger]);
+  }, [displayProgress, showHUD, manualTrigger, setIsSiteLoading]);
 
   const handleReplay = () => {
-    setManualProgress(0);
+    isCompletingRef.current = false;
+    targetProgressRef.current = 0;
+    setDisplayProgress(0);
+    setIsHologramDissolving(false);
+    setShowHologram(true);
+    setShowRealModel(false);
+    setShowHUD(true);
     setManualTrigger(true);
     setIsShaking(false);
     setIsSiteLoading(true);
   };
 
   const handleSkip = () => {
-    setBuildProgress(100);
-    setManualProgress(100);
-    setHasCompletedInitialLoad(true);
-    setManualTrigger(false);
+    isCompletingRef.current = true;
+    targetProgressRef.current = 100;
+    setDisplayProgress(100);
+    setIsHologramDissolving(true);
+    setShowRealModel(true);
+    setShowHUD(false);
+    setShowFlare(false);
     setIsShaking(false);
-    setIsSiteLoading(false);
-  };
-
-  const handleComplete = () => {
-    setHasCompletedInitialLoad(true);
-    setManualTrigger(false);
-    setIsShaking(false);
-    setShowFlare(true);
-    setIsSiteLoading(false);
     setTimeout(() => {
-      setShowFlare(false);
-    }, 850);
+      setShowHologram(false);
+      setHasCompletedInitialLoad(true);
+      setManualTrigger(false);
+      setIsSiteLoading(false);
+    }, 300);
   };
 
-  const shouldShowLoader = !hasCompletedInitialLoad || manualTrigger;
-  const currentProgress = manualTrigger ? manualProgress : buildProgress;
+  const isCurrentlyLoading = showHUD || isCompletingRef.current || manualTrigger;
 
   // Synchronize site loading state to hide navbar while loading
   useEffect(() => {
-    setIsSiteLoading(shouldShowLoader);
-  }, [shouldShowLoader, setIsSiteLoading]);
+    setIsSiteLoading(isCurrentlyLoading);
+  }, [isCurrentlyLoading, setIsSiteLoading]);
 
   // Reset loading state if unmounted
   useEffect(() => {
@@ -988,9 +1153,9 @@ export function MiaModel({ className = '', showStatusLabel = true }: MiaModelPro
     };
   }, [setIsSiteLoading]);
 
-  // Complete page scroll lock while loading is active
+  // Complete page scroll lock while loading HUD is active
   useEffect(() => {
-    if (shouldShowLoader) {
+    if (showHUD) {
       document.body.style.overflow = 'hidden';
       document.documentElement.style.overflow = 'hidden';
       window.scrollTo(0, 0);
@@ -1023,13 +1188,13 @@ export function MiaModel({ className = '', showStatusLabel = true }: MiaModelPro
         lenis.start();
       }
     }
-  }, [shouldShowLoader, lenis]);
+  }, [showHUD, lenis]);
 
   if (!mounted) {
     return (
       <div className={`relative w-full h-full min-h-[100dvh] flex items-center justify-center bg-[#070A14] ${className}`}>
         <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 rounded-full border-2 border-[#38BDF8]/30 border-t-[#38BDF8] animate-spin" />
+          <div className="w-10 h-10 rounded-full border-2 border-[#00F0FF]/30 border-t-[#00F0FF] animate-spin shadow-[0_0_15px_#00F0FF]" />
         </div>
       </div>
     );
@@ -1082,17 +1247,17 @@ export function MiaModel({ className = '', showStatusLabel = true }: MiaModelPro
           {/* Realistic PBR Environment Reflections */}
           <Environment preset="city" environmentIntensity={0.4} />
 
-          {/* 3D Holographic Wireframe Model Builder (Active during loading & replay) */}
-          {shouldShowLoader && (
+          {/* 3D Holographic Wireframe Model Builder (Active during loading & dissolve) */}
+          {showHologram && (
             <HologramModelBuilder
-              progress={currentProgress}
-              isComplete={currentProgress >= 100}
+              progress={displayProgress}
+              isComplete={isHologramDissolving}
             />
           )}
 
           {/* 4K Model with Face/Head Tracking & Electric Neck Glow */}
           <Suspense fallback={null}>
-            <group visible={!shouldShowLoader}>
+            <group visible={showRealModel}>
               <Model
                 hairstyle={hairstyle}
                 onPointerUpdate={(x, y) => {
@@ -1120,26 +1285,28 @@ export function MiaModel({ className = '', showStatusLabel = true }: MiaModelPro
         </Canvas>
       </div>
 
-      {/* 4. Full-Screen Cyberpunk Coding Terminal Loader */}
-      {shouldShowLoader && (
-        <CyberAssemblyHUD
-          progress={currentProgress}
-          item={item}
-          loaded={loaded}
-          total={total}
-          isManualTrigger={manualTrigger}
-          onShake={setIsShaking}
-          onComplete={handleComplete}
-          onSkip={handleSkip}
-        />
-      )}
+      {/* 4. Full-Screen Cyberpunk Coding Terminal Loader with Smooth AnimatePresence */}
+      <AnimatePresence>
+        {showHUD && (
+          <CyberAssemblyHUD
+            progress={displayProgress}
+            item={item}
+            loaded={loaded}
+            total={total}
+            isManualTrigger={manualTrigger}
+            onShake={setIsShaking}
+            onComplete={() => {}}
+            onSkip={handleSkip}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Corner Tech Brackets with Live Tracking Telemetry */}
       <div className="absolute top-24 sm:top-28 left-6 sm:left-12 pointer-events-none select-none z-20 hidden md:block">
         <div className="flex flex-col gap-1 text-[10px] font-mono text-[#38BDF8]/70 tracking-wider">
           <div className="flex items-center gap-1.5 text-[#38BDF8]">
             <span className="inline-block w-2 h-2 border-t-2 border-l-2 border-[#38BDF8]" />
-            <span>EYE_GAZE & FACE // TRACKING</span>
+            <span>EYE_GAZE // TRACKING</span>
           </div>
           <span className="text-[9px] text-[#94A3B8]/70 font-mono">
             TARGET_LOCK: [{mouseCoords.x >= 0 ? `+${mouseCoords.x}` : mouseCoords.x},{' '}
@@ -1162,7 +1329,7 @@ export function MiaModel({ className = '', showStatusLabel = true }: MiaModelPro
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col sm:flex-row items-center gap-3 select-none z-20">
         <div className="flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-[#0D1527]/85 border border-[#38BDF8]/40 backdrop-blur-md text-[11px] font-mono text-[#8AE4FA] shadow-[0_0_25px_rgba(56,189,248,0.25)] pointer-events-none">
           <span className="w-1.5 h-1.5 rounded-full bg-[#38BDF8] animate-ping" />
-          <span className="tracking-wider">MOVE CURSOR FOR EYES & FACE FOCUS // DRAG TO ROTATE</span>
+          <span className="tracking-wider">MOVE CURSOR TO FOCUS EYES // DRAG TO ROTATE</span>
         </div>
 
         {/* Re-trigger Server Crash & Loading Button */}

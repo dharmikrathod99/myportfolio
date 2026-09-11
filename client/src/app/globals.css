@@ -468,4 +468,11 @@ html.dark .glass-panel {
   animation: crt-scanlines 4s linear infinite;
 }
 
-
+@keyframes waveGlide {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
