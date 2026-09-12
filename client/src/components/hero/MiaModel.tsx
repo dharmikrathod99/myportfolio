@@ -1,12 +1,13 @@
 'use client';
 
-import React, { Suspense, useRef, useEffect, useState, useMemo } from 'react';
+import React, { Suspense, useRef, useEffect, useLayoutEffect, useState, useMemo, useCallback } from 'react';
 import * as THREE from 'three';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useGLTF, useAnimations, OrbitControls, useTexture, Environment, useProgress } from '@react-three/drei';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { motion, AnimatePresence } from 'framer-motion';
 import NightSkyBackground from './NightSkyBackground';
+import ElectricBackgroundText from './ElectricBackgroundText';
 import CyberAssemblyHUD from './CyberAssemblyHUD';
 import HologramModelBuilder from './HologramModelBuilder';
 import { useSmoothScroll } from '@/components/SmoothScroll';
@@ -15,6 +16,62 @@ import { useTheme } from '@/context/ThemeContext';
 export interface MiaModelProps {
   className?: string;
   showStatusLabel?: boolean;
+}
+
+// -------------------------------------------------------------
+// RESPONSIVE CAMERA & MODEL FRAMING ENGINE
+// Seamlessly adapts the desktop baseline reference design to
+// laptop, tablet landscape/portrait, and all mobile viewports.
+// -------------------------------------------------------------
+export function getResponsiveCameraConfig(width: number, height: number) {
+  const aspect = width / (height || 1);
+
+  // Desktop landscape (aspect >= 1.6): exact reference values
+  if (aspect >= 1.6) {
+    return {
+      camDist: 1.92,
+      camY: 0.08,
+      targetY: 0.08,
+      fov: 35,
+      modelScale: 1.46,
+      modelY: -4.26,
+    };
+  }
+
+  // Smooth fluid interpolation between mobile portrait (aspect <= 0.5) and desktop (aspect >= 1.6)
+  const t = Math.max(0, Math.min(1, (aspect - 0.5) / (1.6 - 0.5)));
+  const smoothT = t * t * (3 - 2 * t);
+
+  const camDist = THREE.MathUtils.lerp(3.25, 1.92, smoothT);
+  const fov = THREE.MathUtils.lerp(41.5, 35, smoothT);
+  const camY = THREE.MathUtils.lerp(0.12, 0.08, smoothT);
+  const targetY = THREE.MathUtils.lerp(0.12, 0.08, smoothT);
+  const modelScale = THREE.MathUtils.lerp(1.35, 1.46, smoothT);
+  const modelY = THREE.MathUtils.lerp(-3.95, -4.26, smoothT);
+
+  return { camDist, camY, targetY, fov, modelScale, modelY };
+}
+
+function ResponsiveCameraRig({ orbitRef }: { orbitRef: React.RefObject<any> }) {
+  const { camera, size } = useThree();
+
+  useLayoutEffect(() => {
+    const config = getResponsiveCameraConfig(size.width, size.height);
+    const persCam = camera as THREE.PerspectiveCamera;
+
+    if (persCam.isPerspectiveCamera) {
+      persCam.fov = config.fov;
+      persCam.position.set(0, config.camY, config.camDist);
+      persCam.updateProjectionMatrix();
+    }
+
+    if (orbitRef.current) {
+      orbitRef.current.target.set(0, config.targetY, 0);
+      orbitRef.current.update();
+    }
+  }, [camera, size.width, size.height, orbitRef]);
+
+  return null;
 }
 
 // -------------------------------------------------------------
@@ -253,26 +310,41 @@ interface CharacterFaceBones {
   neckLower?: THREE.Bone;
   leftEye?: THREE.Bone;
   rightEye?: THREE.Bone;
+  rightHand?: THREE.Bone;
+  leftHand?: THREE.Bone;
+  rightUpperArm?: THREE.Bone;
+  leftUpperArm?: THREE.Bone;
 }
 
 interface BaseBoneRotations {
   head?: THREE.Euler;
+  headQuat?: THREE.Quaternion;
   neckUpper?: THREE.Euler;
+  neckUpperQuat?: THREE.Quaternion;
   neckLower?: THREE.Euler;
   leftEye?: THREE.Euler;
   rightEye?: THREE.Euler;
 }
 
-function Model({
+interface EyeTrackingCalibration {
+  leftRestQuat: THREE.Quaternion;
+  rightRestQuat: THREE.Quaternion;
+  leftRestFwdInHead: THREE.Vector3;
+  rightRestFwdInHead: THREE.Vector3;
+}
+
+const Model = React.memo(function Model({
   onPointerUpdate,
   hairstyle = 'flowing',
 }: {
   onPointerUpdate?: (x: number, y: number) => void;
   hairstyle?: HairstyleId;
 }) {
+  const { size } = useThree();
   const group = useRef<THREE.Group>(null);
   const bonesRef = useRef<CharacterFaceBones>({});
   const baseRotationsRef = useRef<BaseBoneRotations>({});
+  const eyeCalibrationRef = useRef<EyeTrackingCalibration | null>(null);
   const skinHeadMatRef = useRef<THREE.MeshStandardMaterial | null>(null);
   const neckLightRef = useRef<THREE.PointLight | null>(null);
   const [headBone, setHeadBone] = useState<THREE.Bone | null>(null);
@@ -291,17 +363,81 @@ function Model({
     hairExtra2?: THREE.SkinnedMesh;
   }>({});
 
-  // Smooth interpolated angles for natural eye gaze tracking
-  const currentEyeYawRef = useRef(0);
-  const currentEyePitchRef = useRef(0);
-  const pointerTargetRef = useRef({ x: 0, y: 0, isHovered: false });
+  // Quaternion refs for smooth, jitter-free 3D gaze tracking
+  const currentLeftQuatRef = useRef(new THREE.Quaternion());
+  const currentRightQuatRef = useRef(new THREE.Quaternion());
 
-  // Global mouse tracking: works across the entire viewport and detects mouseleave
+  // Subtle, delayed head and neck following state refs
+  const currentHeadYawRef = useRef(0);
+  const currentHeadPitchRef = useRef(0);
+  const currentNeckYawRef = useRef(0);
+  const currentNeckPitchRef = useRef(0);
+  const tempHeadEulerRef = useRef(new THREE.Euler(0, 0, 0, 'YXZ'));
+  const tempHeadDeltaQRef = useRef(new THREE.Quaternion());
+  const tempNeckDeltaQRef = useRef(new THREE.Quaternion());
+
+  // Cached math objects to prevent garbage collection allocations in useFrame
+  const raycasterRef = useRef(new THREE.Raycaster());
+  const targetPlaneRef = useRef(new THREE.Plane());
+  const identityQuatRef = useRef(new THREE.Quaternion());
+  const tempCamFwdRef = useRef(new THREE.Vector3());
+  const tempPlaneNormalRef = useRef(new THREE.Vector3());
+  const tempPlanePointRef = useRef(new THREE.Vector3());
+  const tempTarget3DRef = useRef(new THREE.Vector3());
+  const tempTargetCamRef = useRef(new THREE.Vector3());
+  const tempEyeCenterRef = useRef(new THREE.Vector3());
+  const tempEyeCenterCamRef = useRef(new THREE.Vector3());
+  const tempLeftEyePosRef = useRef(new THREE.Vector3());
+  const tempRightEyePosRef = useRef(new THREE.Vector3());
+  const tempHeadWorldQuatRef = useRef(new THREE.Quaternion());
+  const tempInvHeadQuatRef = useRef(new THREE.Quaternion());
+  const tempGazeWorldRef = useRef(new THREE.Vector3());
+  const tempGazeHeadRef = useRef(new THREE.Vector3());
+  const tempDeltaQRef = useRef(new THREE.Quaternion());
+  const tempTargetQuatRef = useRef(new THREE.Quaternion());
+  const tempNdcRef = useRef(new THREE.Vector2());
+
+  const pointerTargetRef = useRef({ x: 0, y: 0, isHovered: false });
+  const prevPointerRef = useRef({ x: 0, y: 0 });
+  const pointerVelocityRef = useRef(0);
+  const tempHeadGazeDirRef = useRef(new THREE.Vector3());
+  const headWorldPosRef = useRef(new THREE.Vector3());
+  const handWorldPosRef = useRef(new THREE.Vector3());
+  const eyelashMeshRef = useRef<THREE.Mesh | null>(null);
+  const blinkTimerRef = useRef({
+    nextBlinkTime: 3.0,
+    isBlinking: false,
+    blinkProgress: 0,
+  });
+
+  // Unified pointer & touch tracking: works across mouse, touchscreens, tablets, and styluses
   useEffect(() => {
-    const handlePointerMove = (e: MouseEvent) => {
-      const x = (e.clientX / window.innerWidth) * 2 - 1;
-      const y = -((e.clientY / window.innerHeight) * 2 - 1);
+    const updateCoords = (clientX: number, clientY: number) => {
+      const x = (clientX / window.innerWidth) * 2 - 1;
+      const y = -((clientY / window.innerHeight) * 2 - 1);
       pointerTargetRef.current = { x, y, isHovered: true };
+    };
+
+    const handlePointerMove = (e: PointerEvent) => {
+      updateCoords(e.clientX, e.clientY);
+    };
+
+    const handlePointerDown = (e: PointerEvent) => {
+      updateCoords(e.clientX, e.clientY);
+    };
+
+    const handlePointerUp = () => {
+      pointerTargetRef.current = { x: 0, y: 0, isHovered: false };
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches && e.touches.length > 0) {
+        updateCoords(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    };
+
+    const handleTouchEnd = () => {
+      pointerTargetRef.current = { x: 0, y: 0, isHovered: false };
     };
 
     const handlePointerLeave = () => {
@@ -312,12 +448,22 @@ function Model({
       pointerTargetRef.current = { x: 0, y: 0, isHovered: false };
     };
 
-    window.addEventListener('mousemove', handlePointerMove, { passive: true });
+    window.addEventListener('pointermove', handlePointerMove, { passive: true });
+    window.addEventListener('pointerdown', handlePointerDown, { passive: true });
+    window.addEventListener('pointerup', handlePointerUp, { passive: true });
+    window.addEventListener('pointercancel', handlePointerUp, { passive: true });
+    window.addEventListener('touchmove', handleTouchMove, { passive: true });
+    window.addEventListener('touchend', handleTouchEnd, { passive: true });
     document.addEventListener('mouseleave', handlePointerLeave);
     window.addEventListener('blur', handleBlur);
 
     return () => {
-      window.removeEventListener('mousemove', handlePointerMove);
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerdown', handlePointerDown);
+      window.removeEventListener('pointerup', handlePointerUp);
+      window.removeEventListener('pointercancel', handlePointerUp);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleTouchEnd);
       document.removeEventListener('mouseleave', handlePointerLeave);
       window.removeEventListener('blur', handleBlur);
     };
@@ -332,6 +478,8 @@ function Model({
   const headNormalMap = useTexture('/models/head_normal.png?v=6');
   const eyeDiffuseMap = useTexture('/models/eye_diffuse.png?v=3');
   const eyeNormalMap = useTexture('/models/eye_normal.png?v=3');
+  const hairSpecularMap = useTexture('/models/hair_specular.png');
+  const scalpDiffuseMap = useTexture('/models/scalp_diffuse.png');
 
   useEffect(() => {
     // Optimized texture setup with GPU-friendly settings
@@ -354,22 +502,51 @@ function Model({
     if (eyeNormalMap) {
       configureTexture(eyeNormalMap, THREE.LinearSRGBColorSpace);
     }
-  }, [neckEmissiveMap, eyeDiffuseMap, eyeNormalMap]);
+    if (hairSpecularMap) {
+      configureTexture(hairSpecularMap, THREE.LinearSRGBColorSpace);
+    }
+    if (scalpDiffuseMap) {
+      configureTexture(scalpDiffuseMap, THREE.SRGBColorSpace);
+    }
+  }, [neckEmissiveMap, eyeDiffuseMap, eyeNormalMap, hairSpecularMap, scalpDiffuseMap]);
 
   const headMeshRef = useRef<THREE.Mesh | null>(null);
 
-  // Filter out morph target eyelid blink tracks and eye bone tracks so eyes stay completely static
+  // Filter out animations that raise hand to head/hair/forehead (ADJUST_HAIR, CYBER_TOUCH)
+  // while preserving all natural idle hand movements, subtle arm repositioning, body motion, and walk stride.
+  // Also filter morph target eyelid blink tracks and eye bone tracks so eyes stay completely static and focused.
   const filteredAnimations = useMemo(() => {
-    return animations.map((clip) => {
-      const cloned = clip.clone();
-      cloned.tracks = cloned.tracks.filter((track) => {
-        const tname = track.name.toLowerCase();
-        const isEyeTrack = tname.includes('eye');
-        const isMorphTrack = tname.includes('morphtarget') || tname.includes('target_') || tname.includes('weights');
-        return !isEyeTrack && !isMorphTrack;
+    const FORBIDDEN_GESTURE_KEYWORDS = [
+      'adjust_hair',
+      'cyber_touch',
+      'scratch',
+      'hair',
+      'head_touch',
+      'touch_head',
+    ];
+
+    return animations
+      .filter((clip) => {
+        const lowerName = clip.name.toLowerCase();
+        return !FORBIDDEN_GESTURE_KEYWORDS.some((kw) => lowerName.includes(kw));
+      })
+      .map((clip) => {
+        const cloned = clip.clone();
+        cloned.tracks = cloned.tracks.filter((track) => {
+          const tname = track.name.toLowerCase();
+          const isEyeTrack = tname.includes('eye');
+          const isMorphTrack =
+            tname.includes('morphtarget') ||
+            tname.includes('target_') ||
+            tname.includes('weights');
+          const isHeadOrNeck =
+            tname.includes('head') ||
+            tname.includes('necktwist02') ||
+            tname.includes('neck_02');
+          return !isEyeTrack && !isMorphTrack && !isHeadOrNeck;
+        });
+        return cloned;
       });
-      return cloned;
-    });
   }, [animations]);
 
   const { actions, names } = useAnimations(filteredAnimations, group);
@@ -494,6 +671,7 @@ function Model({
             lashMat.needsUpdate = true;
             mesh.visible = true;
             mesh.renderOrder = 3;
+            eyelashMeshRef.current = mesh;
           }
 
 
@@ -659,7 +837,7 @@ function Model({
             stdMat.needsUpdate = true;
           }
 
-          // 2C. Luxurious, Silky, Jet Black Hair & Scalp Styling
+          // 2C. Luxurious, Silky, Jet Black Hair & Natural Female Scalp Styling
           if (
             matName.includes('Hair_Transparency') ||
             matName.includes('Hair_2_Transparency') ||
@@ -667,22 +845,58 @@ function Model({
           ) {
             const hairMat = mat as THREE.MeshStandardMaterial;
             hairMat.transparent = true;
-            hairMat.alphaTest = 0.08;
+            hairMat.alphaTest = 0.04;
             hairMat.depthWrite = true;
             hairMat.depthTest = true;
             hairMat.side = THREE.DoubleSide; // Render both sides of each strand card
-            hairMat.roughness = 0.28; // Silky specular highlights on black hair
-            hairMat.metalness = 0.15;
-            hairMat.color = new THREE.Color('#121214'); // Rich, deep dark black hair
+            hairMat.roughness = 0.30; // Silky specular reflections
+            hairMat.metalness = 0.08;
+            hairMat.color = new THREE.Color('#121114'); // Rich, deep glossy black hair
 
-            // Enhance strand density so hair looks rich, thick, and lush
+            // Enhance strand density, feather hair roots at scalp, and add anisotropic specular sheen
             hairMat.onBeforeCompile = (shader) => {
+              shader.uniforms.hairSpecularMap = { value: hairSpecularMap };
+              shader.fragmentShader = `
+                uniform sampler2D hairSpecularMap;
+              ` + shader.fragmentShader;
+
+              // Smooth root fade and strand micro-sheen
               shader.fragmentShader = shader.fragmentShader.replace(
-                '#include <alphatest_fragment>',
+                '#include <map_fragment>',
                 `
-                #ifdef USE_ALPHATEST
-                  diffuseColor.a = pow(diffuseColor.a, 0.72);
-                  if ( diffuseColor.a < alphaTest ) discard;
+                #ifdef USE_MAP
+                  vec4 hairSample = texture2D( map, vMapUv );
+
+                  // 1. Natural female hairline root taper:
+                  // For cards meeting the forehead scalp (high vMapUv.y in [0.86, 1.0]),
+                  // softly feather strand roots into the scalp.
+                  // This completely eliminates visible rectangular card edges while keeping individual strands crisp.
+                  float rootFade = 1.0;
+                  if (vMapUv.y > 0.86) {
+                    rootFade = smoothstep(1.0, 0.88, vMapUv.y);
+                  }
+                  hairSample.a *= mix(0.72, 1.0, rootFade);
+
+                  // 2. AAA Cinematic Dark Glossy Hair Tone:
+                  // Rich jet-espresso base with subtle warm brown depth
+                  vec3 deepBlack = vec3(0.045, 0.042, 0.048);
+                  vec3 warmEspresso = vec3(0.085, 0.072, 0.080);
+                  hairSample.rgb = mix(deepBlack, warmEspresso, hairSample.r * 0.45);
+
+                  diffuseColor *= hairSample;
+                #endif
+                `
+              );
+
+              // 3. Strand-aligned Anisotropic Specular Highlights (Kajiya-Kay / Marschner style)
+              shader.fragmentShader = shader.fragmentShader.replace(
+                '#include <roughnessmap_fragment>',
+                `
+                #include <roughnessmap_fragment>
+                #ifdef USE_MAP
+                  vec4 strandSpec = texture2D( hairSpecularMap, vMapUv );
+                  // Modulate roughness along strand lines for silky anisotropic reflections
+                  roughnessFactor = mix(0.24, 0.42, 1.0 - strandSpec.r);
                 #endif
                 `
               );
@@ -692,14 +906,39 @@ function Model({
 
           if (matName.includes('Scalp_2_Transparency')) {
             const scalpMat = mat as THREE.MeshStandardMaterial;
+            if (scalpDiffuseMap) {
+              scalpDiffuseMap.colorSpace = THREE.SRGBColorSpace;
+              scalpDiffuseMap.needsUpdate = true;
+              scalpMat.map = scalpDiffuseMap;
+            }
             scalpMat.transparent = true;
-            scalpMat.alphaTest = 0.25; // Clean threshold prevents faint boundary root haze from encroaching on forehead
-            scalpMat.depthWrite = true;
+            scalpMat.depthWrite = false;
+            scalpMat.depthTest = true;
             scalpMat.opacity = 1.0;
-            scalpMat.roughness = 0.55;
-            scalpMat.metalness = 0.05;
-            scalpMat.color = new THREE.Color('#121214'); // Rich dark black matching hair
+            scalpMat.alphaTest = 0.01;
+            scalpMat.side = THREE.FrontSide;
+            scalpMat.roughness = 0.65;
+            scalpMat.metalness = 0.02;
+            scalpMat.color = new THREE.Color('#141216'); // Rich dark espresso black matching hair roots
+
+            scalpMat.onBeforeCompile = (shader) => {
+              shader.fragmentShader = shader.fragmentShader.replace(
+                '#include <map_fragment>',
+                `
+                #ifdef USE_MAP
+                  vec4 scalpTex = texture2D( map, vMapUv );
+                  // Smooth organic feathering curve for scalp edge:
+                  // softly transitions baby hairs into the forehead skin without hard polygon cuts
+                  float feather = smoothstep(0.02, 0.45, scalpTex.a);
+                  scalpTex.a = feather;
+                  scalpTex.rgb = vec3(0.05, 0.045, 0.055);
+                  diffuseColor *= scalpTex;
+                #endif
+                `
+              );
+            };
             scalpMat.needsUpdate = true;
+            mesh.renderOrder = 1;
           }
 
           if (matName.includes('Scalp_3_Transparency')) {
@@ -713,11 +952,11 @@ function Model({
         });
 
         // Track hair mesh instances for live style switching
-        if (child.name === 'Object_56') hairMeshesRef.current.undercutScalp = child as THREE.Mesh;
-        if (child.name === 'Object_57') hairMeshesRef.current.undercutHair = child as THREE.Mesh;
-        if (child.name === 'Object_59') hairMeshesRef.current.samuraiBun = child as THREE.Mesh;
-        if (child.name === 'Object_61') hairMeshesRef.current.halfUpHair = child as THREE.Mesh;
-        if (child.name === 'Object_62') hairMeshesRef.current.halfUpScalp = child as THREE.Mesh;
+        if (child.name === 'Object_56' || child.name === 'mesh_32') hairMeshesRef.current.undercutScalp = child as THREE.Mesh;
+        if (child.name === 'Object_57' || child.name === 'mesh_33') hairMeshesRef.current.undercutHair = child as THREE.Mesh;
+        if (child.name === 'Object_59' || child.name === 'mesh_34') hairMeshesRef.current.samuraiBun = child as THREE.Mesh;
+        if (child.name === 'Object_61' || child.name === 'mesh_35') hairMeshesRef.current.halfUpHair = child as THREE.Mesh;
+        if (child.name === 'Object_62' || child.name === 'mesh_36') hairMeshesRef.current.halfUpScalp = child as THREE.Mesh;
       }
 
       // 3. Identify Head and Neck bones
@@ -728,10 +967,12 @@ function Model({
         if (name.includes('Head') || name.toLowerCase().includes('head')) {
           foundBones.head = bone;
           baseRotations.head = bone.rotation.clone();
+          baseRotations.headQuat = bone.quaternion.clone();
           setHeadBone(bone);
         } else if (name.includes('NeckTwist02') || name.includes('Neck_02')) {
           foundBones.neckUpper = bone;
           baseRotations.neckUpper = bone.rotation.clone();
+          baseRotations.neckUpperQuat = bone.quaternion.clone();
 
           let neckLight = bone.getObjectByName('NeckElectricLight') as THREE.PointLight | null;
           if (!neckLight) {
@@ -750,11 +991,19 @@ function Model({
         } else if (name.includes('R_Eye') || name.includes('Eye_047')) {
           foundBones.rightEye = bone;
           baseRotations.rightEye = bone.rotation.clone();
+        } else if (name.includes('R_Hand') || name.toLowerCase().includes('r_hand')) {
+          foundBones.rightHand = bone;
+        } else if (name.includes('L_Hand') || name.toLowerCase().includes('l_hand')) {
+          foundBones.leftHand = bone;
+        } else if (name.includes('R_Upperarm') && !name.includes('Twist')) {
+          foundBones.rightUpperArm = bone;
+        } else if (name.includes('L_Upperarm') && !name.includes('Twist')) {
+          foundBones.leftUpperArm = bone;
         }
       }
     });
 
-    // 4. Create lush multi-layer hair strands for Object_61 (Half_up_Hair)
+    // 4. Create lush multi-layer hair strands for Half_up_Hair (mesh_35)
     const baseHalfUpHair = hairMeshesRef.current.halfUpHair as THREE.SkinnedMesh | undefined;
     if (baseHalfUpHair && baseHalfUpHair.geometry && baseHalfUpHair.parent) {
       const parent = baseHalfUpHair.parent;
@@ -769,16 +1018,24 @@ function Model({
         const clonedGeo = baseHalfUpHair.geometry.clone();
         const pos = clonedGeo.attributes.position;
         const norm = clonedGeo.attributes.normal;
+        const uv = clonedGeo.attributes.uv;
         if (pos && norm) {
           for (let i = 0; i < pos.count; i++) {
             const nx = norm.getX(i);
             const ny = norm.getY(i);
             const nz = norm.getZ(i);
+            const v = uv ? uv.getY(i) : 0.5;
+
+            // Attenuate volume offset near hairline roots (v in [0.78, 0.95])
+            // so hair roots remain 100% anchored and clean against scalp,
+            // while the hair body, crown, and sides gain rich, natural volume!
+            const volumeFactor = 1.0 - THREE.MathUtils.smoothstep(v, 0.78, 0.95);
+
             pos.setXYZ(
               i,
-              pos.getX(i) + nx * normalOffset + shiftX,
-              pos.getY(i) + ny * normalOffset + shiftY,
-              pos.getZ(i) + nz * normalOffset + shiftZ
+              pos.getX(i) + (nx * normalOffset + shiftX) * volumeFactor,
+              pos.getY(i) + (ny * normalOffset + shiftY) * volumeFactor,
+              pos.getZ(i) + (nz * normalOffset + shiftZ) * volumeFactor
             );
           }
           pos.needsUpdate = true;
@@ -795,13 +1052,13 @@ function Model({
       };
 
       if (!parent.getObjectByName('Half_up_Hair_Extra_1')) {
-        const extra1 = createHairLayer('Half_up_Hair_Extra_1', 0.005, 0.003, 0.001, -0.002);
+        const extra1 = createHairLayer('Half_up_Hair_Extra_1', 6.0, 1.5, 2.0, -1.0);
         parent.add(extra1);
         hairMeshesRef.current.hairExtra1 = extra1;
       }
 
       if (!parent.getObjectByName('Half_up_Hair_Extra_2')) {
-        const extra2 = createHairLayer('Half_up_Hair_Extra_2', -0.004, -0.003, -0.001, 0.002);
+        const extra2 = createHairLayer('Half_up_Hair_Extra_2', -4.0, -1.2, -1.5, 1.0);
         parent.add(extra2);
         hairMeshesRef.current.hairExtra2 = extra2;
       }
@@ -810,16 +1067,58 @@ function Model({
     bonesRef.current = foundBones;
     baseRotationsRef.current = baseRotations;
 
-    // Play smooth natural walk animation without hand movements to hair/face
-    const targetClip = names[0];
-
-    if (targetClip && actions[targetClip]) {
-      Object.values(actions).forEach((act) => act?.stop());
-      const act = actions[targetClip];
-      act?.reset().fadeIn(0.4).play();
-      activeActionRef.current = act;
+    // Ground-truth anatomical calibration for eye line-of-sight tracking
+    if (foundBones.leftEye && foundBones.rightEye) {
+      // The natural optical axis in bone local space is (0, -1, 0)
+      // because bind pose rotation has Euler _x = -PI / 2
+      const boneLocalFwd = new THREE.Vector3(0, -1, 0);
+      const lQuat = foundBones.leftEye.quaternion.clone();
+      const rQuat = foundBones.rightEye.quaternion.clone();
+      eyeCalibrationRef.current = {
+        leftRestQuat: lQuat,
+        rightRestQuat: rQuat,
+        leftRestFwdInHead: boneLocalFwd.clone().applyQuaternion(lQuat),
+        rightRestFwdInHead: boneLocalFwd.clone().applyQuaternion(rQuat),
+      };
+      currentLeftQuatRef.current.copy(lQuat);
+      currentRightQuatRef.current.copy(rQuat);
     }
-  }, [actions, names, scene, neckEmissiveMap, eyeDiffuseMap, eyeNormalMap]);
+
+  }, [scene, neckEmissiveMap, eyeDiffuseMap, eyeNormalMap, hairSpecularMap, scalpDiffuseMap]);
+
+  // Continuous & Infinite Walking Animation System:
+  // Starts the existing walking animation (MOTION / WALK_STRIDE) and ensures it loops indefinitely
+  // with LoopRepeat and infinite repetitions, without any automatic transition to idle or standing poses.
+  useEffect(() => {
+    const walkClipName =
+      names.find((n) => n === 'MOTION') ||
+      names.find((n) => n === 'WALK_STRIDE') ||
+      names[0];
+
+    if (!walkClipName || !actions[walkClipName]) return;
+
+    // Ensure all other action tracks are stopped so only walking plays
+    Object.keys(actions).forEach((key) => {
+      if (key !== walkClipName) {
+        actions[key]?.stop();
+      }
+    });
+
+    const walkAction = actions[walkClipName];
+    if (walkAction) {
+      walkAction.setLoop(THREE.LoopRepeat, Infinity);
+      walkAction.clampWhenFinished = false;
+      walkAction.enabled = true;
+      if (!walkAction.isRunning()) {
+        walkAction.reset().fadeIn(0.5).play();
+      }
+      activeActionRef.current = walkAction;
+    }
+
+    return () => {
+      walkAction?.stop();
+    };
+  }, [actions, names]);
 
   // Default original model hair
   useEffect(() => {
@@ -827,10 +1126,12 @@ function Model({
     if (halfUpHair) {
       halfUpHair.visible = true;
       halfUpHair.renderOrder = 2;
+      if (halfUpHair.parent) halfUpHair.parent.visible = true;
     }
     if (halfUpScalp) {
       halfUpScalp.visible = true;
       halfUpScalp.renderOrder = 1;
+      if (halfUpScalp.parent) halfUpScalp.parent.visible = true;
     }
     if (hairExtra1) {
       hairExtra1.visible = true;
@@ -847,12 +1148,6 @@ function Model({
 
   // Real-time Face & Head Mouse Tracking
   useFrame((state, delta) => {
-    const { pointer } = state;
-
-    if (onPointerUpdate) {
-      onPointerUpdate(pointer.x, pointer.y);
-    }
-
     uniformsRef.current.uTime.value = state.clock.elapsedTime;
 
     const t = state.clock.elapsedTime;
@@ -881,91 +1176,337 @@ function Model({
       skinHeadMatRef.current.emissiveIntensity = Math.max(0.02, neonPower * 2.2);
     }
 
-    // Ensure eyelids remain open and natural
+    // -------------------------------------------------------------
+    // NATURAL HUMAN BLINKING SYSTEM (EYELIDS & EYELASHES)
+    // -------------------------------------------------------------
+    const blink = blinkTimerRef.current;
+    if (!blink.isBlinking) {
+      if (state.clock.elapsedTime >= blink.nextBlinkTime) {
+        blink.isBlinking = true;
+        blink.blinkProgress = 0;
+      }
+    } else {
+      // Natural human blink cycle (~0.16s: rapid close, gentle open)
+      blink.blinkProgress += delta / 0.16;
+      if (blink.blinkProgress >= 1.0) {
+        blink.isBlinking = false;
+        blink.blinkProgress = 0;
+        // Schedule next natural blink between 3.2s and 6.2s
+        blink.nextBlinkTime = state.clock.elapsedTime + 3.2 + Math.random() * 3.0;
+      }
+    }
+
+    // Bell curve for smooth natural closing and opening (0 -> 1 -> 0)
+    const blinkWeight = blink.isBlinking
+      ? Math.sin(blink.blinkProgress * Math.PI)
+      : 0.0;
+
+    // Apply synchronized natural blink (target 16: left eyelid, target 17: right eyelid)
     if (headMeshRef.current && headMeshRef.current.morphTargetInfluences) {
-      headMeshRef.current.morphTargetInfluences.fill(0);
+      headMeshRef.current.morphTargetInfluences[16] = blinkWeight;
+      headMeshRef.current.morphTargetInfluences[17] = blinkWeight;
+    }
+    if (eyelashMeshRef.current && eyelashMeshRef.current.morphTargetInfluences) {
+      eyelashMeshRef.current.morphTargetInfluences[16] = blinkWeight;
+      eyelashMeshRef.current.morphTargetInfluences[17] = blinkWeight;
     }
 
-    // Seamlessly loop the walk stride section (0.0s - 2.45s) so no hand-to-head movements ever occur
-    if (activeActionRef.current && activeActionRef.current.time >= 2.45) {
-      activeActionRef.current.time = 0.0;
+    // Proximity & Height Safety Guard:
+    // Guarantees that neither hand can ever raise towards the head, forehead, or hair
+    const bones = bonesRef.current;
+    if (bones.head) {
+      const headPos = headWorldPosRef.current;
+      const handPos = handWorldPosRef.current;
+      bones.head.getWorldPosition(headPos);
+
+      if (bones.rightHand && bones.rightUpperArm) {
+        bones.rightHand.getWorldPosition(handPos);
+        if (handPos.distanceTo(headPos) < 0.45 || handPos.y > headPos.y - 0.28) {
+          bones.rightUpperArm.rotation.x = THREE.MathUtils.clamp(bones.rightUpperArm.rotation.x, -0.5, 0.25);
+          bones.rightUpperArm.rotation.z = THREE.MathUtils.clamp(bones.rightUpperArm.rotation.z, -1.2, -0.1);
+        }
+      }
+
+      if (bones.leftHand && bones.leftUpperArm) {
+        bones.leftHand.getWorldPosition(handPos);
+        if (handPos.distanceTo(headPos) < 0.45 || handPos.y > headPos.y - 0.28) {
+          bones.leftUpperArm.rotation.x = THREE.MathUtils.clamp(bones.leftUpperArm.rotation.x, -0.5, 0.25);
+          bones.leftUpperArm.rotation.z = THREE.MathUtils.clamp(bones.leftUpperArm.rotation.z, 0.1, 1.2);
+        }
+      }
     }
 
     // -------------------------------------------------------------
-    // ANATOMICALLY REALISTIC MOUSE-FOLLOWING EYE GAZE TRACKING
+    // ACCURATE 3D CAMERA RAYCASTING & NATURAL EYE TARGETING
     // -------------------------------------------------------------
-    // 1. Calculate normalized cursor position with diagonal radius constraint
+    const { camera } = state;
     const { x, y, isHovered } = pointerTargetRef.current;
+    const ndcX = isHovered ? x : 0.0;
+    const ndcY = isHovered ? y : 0.0;
 
     if (onPointerUpdate) {
-      onPointerUpdate(isHovered ? x : 0, isHovered ? y : 0);
+      onPointerUpdate(ndcX, ndcY);
     }
 
-    let targetEyeYaw = 0.0;
-    let targetEyePitch = 0.0;
+    const calib = eyeCalibrationRef.current;
 
-    if (isHovered) {
-      const dist = Math.hypot(x, y);
-      const scale = dist > 1.0 ? 1.0 / dist : 1.0;
-      const normX = x * scale;
-      const normY = y * scale;
+    if (bones.leftEye && bones.rightEye && bones.head && calib) {
+      // Track mouse movement velocity to make head response feel organically alive
+      const pDeltaX = ndcX - prevPointerRef.current.x;
+      const pDeltaY = ndcY - prevPointerRef.current.y;
+      prevPointerRef.current.x = ndcX;
+      prevPointerRef.current.y = ndcY;
+      const instantSpeed = Math.sqrt(pDeltaX * pDeltaX + pDeltaY * pDeltaY) / Math.max(0.001, delta);
+      // Fast attack to notice motion immediately, smooth decay as motion ceases
+      const velAttack = 15.0;
+      const velDecay = 2.5;
+      const velRate = instantSpeed > pointerVelocityRef.current ? velAttack : velDecay;
+      pointerVelocityRef.current = THREE.MathUtils.damp(
+        pointerVelocityRef.current,
+        instantSpeed,
+        velRate,
+        delta
+      );
 
-      // Subtle, anatomically realistic movement limits:
-      // When cursor moves left (normX < 0) -> yaw is negative (looks left)
-      // When cursor moves right (normX > 0) -> yaw is positive (looks right)
-      // When cursor moves upward (normY > 0) -> pitch is negative (looks slightly upward)
-      // When cursor moves downward (normY < 0) -> pitch is positive (looks slightly downward)
-      // Eyeballs stay strictly within natural sclera boundaries (~7.5 deg yaw, ~4.5 deg pitch)
-      targetEyeYaw = normX * 0.13;
-      targetEyePitch = -normY * 0.08;
-    }
+      // Velocity weight: slow motion produces a very subtle response (~40%), normal motion reaches full natural response (100%)
+      const speedNorm = Math.min(1.0, pointerVelocityRef.current / 0.6);
+      const velocityWeight = isHovered ? (0.4 + 0.6 * speedNorm) : 0.0;
 
-    // Fluid, human-like easing/interpolation (no snapping, jitter, or unnatural sudden jumps)
-    currentEyeYawRef.current = THREE.MathUtils.damp(
-      currentEyeYawRef.current,
-      targetEyeYaw,
-      6.5,
-      delta
-    );
-    currentEyePitchRef.current = THREE.MathUtils.damp(
-      currentEyePitchRef.current,
-      targetEyePitch,
-      6.5,
-      delta
-    );
+      // 1. Refresh world positions for eye bones
+      bones.leftEye.getWorldPosition(tempLeftEyePosRef.current);
+      bones.rightEye.getWorldPosition(tempRightEyePosRef.current);
+      tempEyeCenterRef.current
+        .addVectors(tempLeftEyePosRef.current, tempRightEyePosRef.current)
+        .multiplyScalar(0.5);
 
-    const eyeYaw = currentEyeYawRef.current;
-    const eyePitch = currentEyePitchRef.current;
+      // 2. Physical 3D screen-plane cursor target:
+      // Maps the 2D cursor position directly to the true screen plane at the camera distance.
+      tempEyeCenterCamRef.current
+        .copy(tempEyeCenterRef.current)
+        .applyMatrix4(camera.matrixWorldInverse);
+      const camDistToEyes = Math.max(0.5, -tempEyeCenterCamRef.current.z);
 
-    const bones = bonesRef.current;
+      const persCam = camera as THREE.PerspectiveCamera;
+      const camFov = persCam.fov ?? 35;
+      const camAspect = persCam.aspect ?? (state.size.width / (state.size.height || 1));
+      const vFovRad = THREE.MathUtils.degToRad(camFov);
+      const halfH = camDistToEyes * Math.tan(vFovRad / 2);
+      const halfW = halfH * camAspect;
 
-    // Static eyes with 0 animation (clean, focused, forward gaze)
-    if (bones.leftEye) {
-      bones.leftEye.rotation.set(0, 0, 0);
-    }
-    if (bones.rightEye) {
-      bones.rightEye.rotation.set(0, 0, 0);
+      if (isHovered) {
+        tempTargetCamRef.current.set(
+          ndcX * halfW,
+          ndcY * halfH,
+          0 // exactly on the camera screen plane
+        );
+      } else {
+        tempTargetCamRef.current.set(0, 0, 0);
+      }
+
+      // Transform target into World Space
+      tempTarget3DRef.current
+        .copy(tempTargetCamRef.current)
+        .applyMatrix4(camera.matrixWorld);
+
+      // 3. Synchronized Face/Head Follow derived from general gaze direction to target
+      // Uses the accurate 3D gaze target direction rather than raw cursor values
+      const headPos = headWorldPosRef.current;
+      bones.head.getWorldPosition(headPos);
+
+      // General gaze direction from head to 3D target
+      tempHeadGazeDirRef.current
+        .subVectors(tempTarget3DRef.current, headPos)
+        .normalize();
+
+      // Yaw (horizontal) and Pitch (vertical) toward target
+      const rawGazeYaw = Math.atan2(tempHeadGazeDirRef.current.x, Math.max(0.001, tempHeadGazeDirRef.current.z));
+      const rawGazePitch = Math.asin(THREE.MathUtils.clamp(tempHeadGazeDirRef.current.y, -1, 1));
+
+      // Reaction threshold / dead-zone:
+      // Small mouse movements: eyes respond, head stays still.
+      // Meaningful mouse movements: eyes respond, head subtly follows.
+      const gazeDist = Math.sqrt(rawGazeYaw * rawGazeYaw + rawGazePitch * rawGazePitch);
+      const headDeadzone = 0.04; // ~2.3 degrees
+      let headGazeScale = 0.0;
+      if (isHovered && gazeDist > headDeadzone) {
+        const excess = (gazeDist - headDeadzone) / Math.max(0.001, 0.45 - headDeadzone);
+        headGazeScale = THREE.MathUtils.clamp(excess, 0, 1) * velocityWeight;
+      }
+
+      // Very subtle, conservative rotation limits:
+      // Head follows ~20% of yaw (max ~0.055 rad / ~3.1°), ~10% of pitch (max ~0.025 rad / ~1.4°). Horizontal > Vertical.
+      const subtleHeadYaw = THREE.MathUtils.clamp(rawGazeYaw * 0.20 * headGazeScale, -0.055, 0.055);
+      const subtleHeadPitch = THREE.MathUtils.clamp(-rawGazePitch * 0.10 * headGazeScale, -0.025, 0.025);
+
+      // Subtle breathing & idle life micro-movements
+      const microYaw = Math.sin(t * 0.45) * 0.002 + Math.sin(t * 0.18) * 0.001;
+      const microPitch = Math.sin(t * 0.60) * 0.0015 + Math.cos(t * 0.22) * 0.001;
+
+      const targetTotalYaw = subtleHeadYaw + microYaw;
+      const targetTotalPitch = subtleHeadPitch + microPitch;
+
+      // Natural hierarchy: Neck takes ~25%, Head takes ~75%
+      const targetNeckYaw = targetTotalYaw * 0.25;
+      const targetNeckPitch = targetTotalPitch * 0.25;
+      const targetHeadYaw = targetTotalYaw * 0.75;
+      const targetHeadPitch = targetTotalPitch * 0.75;
+
+      // Natural delayed smooth easing (head damping 2.6 vs eye damping 12)
+      // "Eyes first, face second": Eyes react immediately, head follows with a natural soft delay and settles smoothly
+      const headDamping = 2.6;
+      currentNeckYawRef.current = THREE.MathUtils.damp(
+        currentNeckYawRef.current,
+        targetNeckYaw,
+        headDamping,
+        delta
+      );
+      currentNeckPitchRef.current = THREE.MathUtils.damp(
+        currentNeckPitchRef.current,
+        targetNeckPitch,
+        headDamping,
+        delta
+      );
+      currentHeadYawRef.current = THREE.MathUtils.damp(
+        currentHeadYawRef.current,
+        targetHeadYaw,
+        headDamping,
+        delta
+      );
+      currentHeadPitchRef.current = THREE.MathUtils.damp(
+        currentHeadPitchRef.current,
+        targetHeadPitch,
+        headDamping,
+        delta
+      );
+
+      const base = baseRotationsRef.current;
+
+      // Apply rotation to NeckUpper
+      if (bones.neckUpper && base.neckUpperQuat) {
+        tempHeadEulerRef.current.set(
+          currentNeckPitchRef.current,
+          currentNeckYawRef.current,
+          0,
+          'YXZ'
+        );
+        tempNeckDeltaQRef.current.setFromEuler(tempHeadEulerRef.current);
+        bones.neckUpper.quaternion
+          .copy(base.neckUpperQuat)
+          .multiply(tempNeckDeltaQRef.current);
+      }
+
+      // Apply rotation to Head
+      if (bones.head && base.headQuat) {
+        tempHeadEulerRef.current.set(
+          currentHeadPitchRef.current,
+          currentHeadYawRef.current,
+          0,
+          'YXZ'
+        );
+        tempHeadDeltaQRef.current.setFromEuler(tempHeadEulerRef.current);
+        bones.head.quaternion
+          .copy(base.headQuat)
+          .multiply(tempHeadDeltaQRef.current);
+      }
+
+      // Refresh world matrix so eye bones and head quat reflect the new head turn for exact gaze calculation
+      if (group.current) {
+        group.current.updateWorldMatrix(true, true);
+      }
+
+      // Refresh eye positions after head/neck update
+      bones.leftEye.getWorldPosition(tempLeftEyePosRef.current);
+      bones.rightEye.getWorldPosition(tempRightEyePosRef.current);
+
+      // 3. Coordinate transformation into Head local space
+      // (accounts for model position/scale, camera OrbitControls rotation, and animated head tilts)
+      bones.head.getWorldQuaternion(tempHeadWorldQuatRef.current);
+      tempInvHeadQuatRef.current.copy(tempHeadWorldQuatRef.current).invert();
+
+      const maxGazeAngle = 0.42; // ~24 degrees: natural anatomical limit, fully prevents socket clipping
+      const dampingSpeed = 12; // Responsive, smooth easing without perceptible lag or jitter
+      const slerpFactor = 1 - Math.exp(-dampingSpeed * delta);
+
+      // === LEFT EYE TARGETING ===
+      // Vector from left eye to 3D cursor target in world space
+      tempGazeWorldRef.current
+        .subVectors(tempTarget3DRef.current, tempLeftEyePosRef.current)
+        .normalize();
+      // Transform gaze direction into Head local space
+      tempGazeHeadRef.current
+        .copy(tempGazeWorldRef.current)
+        .applyQuaternion(tempInvHeadQuatRef.current);
+      // Compute rotational delta from rest forward to desired gaze
+      tempDeltaQRef.current.setFromUnitVectors(
+        calib.leftRestFwdInHead,
+        tempGazeHeadRef.current
+      );
+      // Natural human anatomical angle limit
+      const leftAngle = 2 * Math.acos(Math.min(1, Math.max(-1, tempDeltaQRef.current.w)));
+      if (leftAngle > maxGazeAngle) {
+        tempDeltaQRef.current.slerp(identityQuatRef.current, 1 - maxGazeAngle / leftAngle);
+      }
+      // Target quaternion in Head local space = deltaQ * restQuat
+      tempTargetQuatRef.current.multiplyQuaternions(
+        tempDeltaQRef.current,
+        calib.leftRestQuat
+      );
+      // Smooth interpolation & apply to bone
+      currentLeftQuatRef.current.slerp(tempTargetQuatRef.current, slerpFactor);
+      bones.leftEye.quaternion.copy(currentLeftQuatRef.current);
+
+      // === RIGHT EYE TARGETING ===
+      // Vector from right eye to 3D cursor target in world space
+      tempGazeWorldRef.current
+        .subVectors(tempTarget3DRef.current, tempRightEyePosRef.current)
+        .normalize();
+      // Transform gaze direction into Head local space
+      tempGazeHeadRef.current
+        .copy(tempGazeWorldRef.current)
+        .applyQuaternion(tempInvHeadQuatRef.current);
+      // Compute rotational delta from rest forward to desired gaze
+      tempDeltaQRef.current.setFromUnitVectors(
+        calib.rightRestFwdInHead,
+        tempGazeHeadRef.current
+      );
+      // Natural human anatomical angle limit
+      const rightAngle = 2 * Math.acos(Math.min(1, Math.max(-1, tempDeltaQRef.current.w)));
+      if (rightAngle > maxGazeAngle) {
+        tempDeltaQRef.current.slerp(identityQuatRef.current, 1 - maxGazeAngle / rightAngle);
+      }
+      // Target quaternion in Head local space = deltaQ * restQuat
+      tempTargetQuatRef.current.multiplyQuaternions(
+        tempDeltaQRef.current,
+        calib.rightRestQuat
+      );
+      // Smooth interpolation & apply to bone
+      currentRightQuatRef.current.slerp(tempTargetQuatRef.current, slerpFactor);
+      bones.rightEye.quaternion.copy(currentRightQuatRef.current);
     }
 
     if (group.current) {
-      group.current.position.set(0, -4.26, 0);
+      const frameConfig = getResponsiveCameraConfig(state.size.width, state.size.height);
+      group.current.position.set(0, frameConfig.modelY, 0);
       group.current.rotation.set(0, 0, 0);
+      group.current.scale.set(frameConfig.modelScale, frameConfig.modelScale, frameConfig.modelScale);
     }
   });
+
+  const initialConfig = getResponsiveCameraConfig(size.width, size.height);
 
   return (
     <group
       ref={group}
-      position={[0, -4.26, 0]}
+      position={[0, initialConfig.modelY, 0]}
       rotation={[0, 0, 0]}
-      scale={1.46}
+      scale={initialConfig.modelScale}
       dispose={null}
     >
       <primitive object={scene} />
       {headBone && <CyberEarphone headBone={headBone} />}
     </group>
   );
-}
+});
 
 // Preload the GLB model asset and textures
 useGLTF.preload('/models/mia.glb', true, true, (loader) => {
@@ -980,7 +1521,14 @@ useTexture.preload('/models/eye_normal.png?v=3');
 export function MiaModel({ className = '', showStatusLabel = true }: MiaModelProps) {
   const [mounted, setMounted] = useState(false);
   const [mouseCoords, setMouseCoords] = useState({ x: 0, y: 0 });
+  const handlePointerUpdate = useCallback((x: number, y: number) => {
+    setMouseCoords({
+      x: Number(x.toFixed(2)),
+      y: Number(y.toFixed(2)),
+    });
+  }, []);
   const [hairstyle, setHairstyle] = useState<HairstyleId>('flowing');
+  const orbitControlsRef = useRef<any>(null);
   const { lenis } = useSmoothScroll();
   const { setIsSiteLoading } = useTheme();
 
@@ -1209,6 +1757,9 @@ export function MiaModel({ className = '', showStatusLabel = true }: MiaModelPro
       {/* 1. Exact Night Sky Background with Twinkling Stars & Shooting Comets */}
       <NightSkyBackground />
 
+      {/* 1B. Electric Cyber Background Model Name 'DIYKAN' (Revealed only after model is loaded) */}
+      <ElectricBackgroundText isLoaded={showRealModel && !showHUD} />
+
       {/* 2. Blinding Cyan/White Reboot Shockwave Flare upon server restore */}
       {showFlare && (
         <motion.div
@@ -1260,18 +1811,17 @@ export function MiaModel({ className = '', showStatusLabel = true }: MiaModelPro
             <group visible={showRealModel}>
               <Model
                 hairstyle={hairstyle}
-                onPointerUpdate={(x, y) => {
-                  setMouseCoords({
-                    x: Number(x.toFixed(2)),
-                    y: Number(y.toFixed(2)),
-                  });
-                }}
+                onPointerUpdate={handlePointerUpdate}
               />
             </group>
           </Suspense>
 
+          {/* Dynamic Responsive Camera Rig */}
+          <ResponsiveCameraRig orbitRef={orbitControlsRef} />
+
           {/* OrbitControls */}
           <OrbitControls
+            ref={orbitControlsRef}
             target={[0, 0.08, 0]}
             enableZoom={false}
             enablePan={false}
@@ -1306,7 +1856,7 @@ export function MiaModel({ className = '', showStatusLabel = true }: MiaModelPro
         <div className="flex flex-col gap-1 text-[10px] font-mono text-[#38BDF8]/70 tracking-wider">
           <div className="flex items-center gap-1.5 text-[#38BDF8]">
             <span className="inline-block w-2 h-2 border-t-2 border-l-2 border-[#38BDF8]" />
-            <span>EYE_GAZE // TRACKING</span>
+            <span>EYE_GAZE </span>
           </div>
           <span className="text-[9px] text-[#94A3B8]/70 font-mono">
             TARGET_LOCK: [{mouseCoords.x >= 0 ? `+${mouseCoords.x}` : mouseCoords.x},{' '}
@@ -1314,44 +1864,6 @@ export function MiaModel({ className = '', showStatusLabel = true }: MiaModelPro
           </span>
         </div>
       </div>
-
-      <div className="absolute top-24 sm:top-28 right-6 sm:right-12 pointer-events-none select-none z-20 hidden md:block text-right">
-        <div className="flex flex-col gap-1 text-[10px] font-mono text-[#C084FC]/70 tracking-wider items-end">
-          <div className="flex items-center gap-1.5 text-[#C084FC]">
-            <span>ELECTRIC_NECK // GLOWING</span>
-            <span className="inline-block w-2 h-2 border-t-2 border-r-2 border-[#C084FC]" />
-          </div>
-          <span className="text-[9px] text-[#94A3B8]/70 font-mono">4K ULTRA-HD // 60 FPS</span>
-        </div>
-      </div>
-
-      {/* Interactive Control Hint Pill, Hairstyle Selector & Re-trigger Button */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col sm:flex-row items-center gap-3 select-none z-20">
-        <div className="flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-[#0D1527]/85 border border-[#38BDF8]/40 backdrop-blur-md text-[11px] font-mono text-[#8AE4FA] shadow-[0_0_25px_rgba(56,189,248,0.25)] pointer-events-none">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#38BDF8] animate-ping" />
-          <span className="tracking-wider">MOVE CURSOR TO FOCUS EYES // DRAG TO ROTATE</span>
-        </div>
-
-        {/* Re-trigger Server Crash & Loading Button */}
-        <button
-          onClick={handleReplay}
-          className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-[#090D1A]/90 border border-[#38BDF8]/60 hover:border-[#00F0FF] hover:bg-[#38BDF8]/20 transition-all text-[11px] font-mono font-bold text-[#38BDF8] hover:text-[#FFFFFF] uppercase tracking-wider cursor-pointer shadow-[0_0_20px_rgba(56,189,248,0.3)] hover:shadow-[0_0_30px_rgba(0,240,255,0.6)]"
-        >
-          <span>⚡ RE-TRIGGER CRASH & LOAD</span>
-        </button>
-      </div>
-
-      {/* Online Status HUD */}
-      {showStatusLabel && (
-        <div className="absolute right-4 sm:right-8 lg:right-20 top-20 sm:top-24 pointer-events-none select-none z-30">
-          <div className="flex items-center gap-2 sm:gap-2.5 px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-lg bg-[#0F172A]/90 border border-[#38BDF8]/40 backdrop-blur-md shadow-[0_0_20px_rgba(56,189,248,0.25)]">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#00F0FF] animate-ping" />
-            <span className="text-[10px] sm:text-xs font-mono font-bold tracking-widest text-[#8AE4FA] uppercase">
-              MIA // 4K ONLINE
-            </span>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

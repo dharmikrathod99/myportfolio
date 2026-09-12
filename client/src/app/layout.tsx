@@ -173,7 +173,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const servicesSchema = getServicesSchema();
 
   return (
-    <html lang="en" className={`${spaceGrotesk.variable} ${inter.variable} ${instrumentSerif.variable} light`}>
+    <html lang="en" className={`${spaceGrotesk.variable} ${inter.variable} ${instrumentSerif.variable} light`} suppressHydrationWarning>
       <head>
         <link rel="icon" href="/main-logo.png" type="image/png" sizes="any" />
         <link rel="apple-touch-icon" href="/main-logo.png" />
@@ -202,7 +202,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           dangerouslySetInnerHTML={{ __html: JSON.stringify(servicesSchema) }}
         />
       </head>
-      <body className="font-sans bg-dark-bg text-customText-primary">
+      <body className="font-sans bg-dark-bg text-customText-primary" suppressHydrationWarning>
         <ClientShell>
           {children}
         </ClientShell>

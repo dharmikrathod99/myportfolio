@@ -476,3 +476,119 @@ html.dark .glass-panel {
     transform: translateX(-50%);
   }
 }
+
+/* ================= ⚡ DIYKAN ELECTRICITY PASS & CURRENT SHOCK ANIMATIONS ================= */
+@keyframes electric-shock-pass {
+  0% {
+    background-position: -120% 0;
+    filter: drop-shadow(0 0 6px rgba(0, 180, 255, 0.45));
+    transform: translate3d(0, 0, 0);
+  }
+  20% {
+    background-position: -20% 0;
+    filter: drop-shadow(0 0 8px rgba(0, 195, 255, 0.55));
+    transform: translate3d(0, 0, 0);
+  }
+  24% {
+    /* Voltage surge strikes */
+    background-position: 40% 0;
+    filter: drop-shadow(0 0 16px rgba(0, 229, 255, 0.9)) drop-shadow(0 0 28px rgba(0, 140, 255, 0.6));
+    transform: translate3d(-1px, 0.5px, 0);
+  }
+  26% {
+    /* Peak electricity pass through D-I-Y and K-A-N */
+    background-position: 70% 0;
+    filter: drop-shadow(0 0 22px rgba(0, 240, 255, 0.95)) drop-shadow(0 0 35px rgba(0, 150, 255, 0.7));
+    transform: translate3d(1px, -0.5px, 0);
+  }
+  28% {
+    /* After-discharge settle */
+    background-position: 120% 0;
+    filter: drop-shadow(0 0 12px rgba(0, 212, 255, 0.65));
+    transform: translate3d(-0.5px, 0, 0);
+  }
+  30% {
+    background-position: 180% 0;
+    filter: drop-shadow(0 0 6px rgba(0, 180, 255, 0.45));
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    background-position: 250% 0;
+    filter: drop-shadow(0 0 6px rgba(0, 180, 255, 0.45));
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.animate-electric-shock {
+  background-size: 250% auto;
+  animation: electric-shock-pass 4.2s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+}
+
+@keyframes lightning-arc-zap {
+  0%, 22.9%, 27.1%, 100% {
+    opacity: 0;
+    transform: scaleY(0.8);
+  }
+  23% {
+    opacity: 0.9;
+    transform: scaleY(1.05) translate3d(-1px, 0, 0);
+  }
+  24% {
+    opacity: 0.3;
+  }
+  24.5% {
+    opacity: 1;
+    transform: scaleY(0.95) translate3d(1px, -1px, 0);
+  }
+  25.5% {
+    opacity: 0.5;
+  }
+  26% {
+    opacity: 1;
+    transform: scaleY(1.02) translate3d(-0.5px, 0.5px, 0);
+  }
+  27% {
+    opacity: 0.2;
+  }
+}
+
+.animate-lightning-arc {
+  animation: lightning-arc-zap 4.2s infinite;
+}
+
+@keyframes spark-jitter {
+  0%, 100% {
+    opacity: 0.25;
+    transform: scale(0.8);
+  }
+  23%, 26% {
+    opacity: 1;
+    transform: scale(1.35) translate3d(2px, -2px, 0);
+  }
+  24%, 27% {
+    opacity: 0.4;
+    transform: scale(0.9);
+  }
+}
+
+.animate-spark-jitter {
+  animation: spark-jitter 4.2s infinite;
+}
+
+@keyframes cinematic-drift {
+  0%, 100% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0.85;
+  }
+  50% {
+    transform: translate3d(0, -3px, 0);
+    opacity: 0.94;
+  }
+}
+
+.animate-cinematic-drift {
+  animation: cinematic-drift 10s ease-in-out infinite;
+}
+
+
+
