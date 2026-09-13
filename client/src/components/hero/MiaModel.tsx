@@ -10,6 +10,8 @@ import NightSkyBackground from './NightSkyBackground';
 import ElectricBackgroundText from './ElectricBackgroundText';
 import CyberAssemblyHUD from './CyberAssemblyHUD';
 import HologramModelBuilder from './HologramModelBuilder';
+import DaykanVoiceWidget from './DaykanVoiceWidget';
+import DaykanVoiceManager, { VisemeFrame } from './DaykanVoiceManager';
 import { useSmoothScroll } from '@/components/SmoothScroll';
 import { useTheme } from '@/context/ThemeContext';
 
@@ -42,12 +44,15 @@ export function getResponsiveCameraConfig(width: number, height: number) {
   const t = Math.max(0, Math.min(1, (aspect - 0.5) / (1.6 - 0.5)));
   const smoothT = t * t * (3 - 2 * t);
 
-  const camDist = THREE.MathUtils.lerp(3.25, 1.92, smoothT);
-  const fov = THREE.MathUtils.lerp(41.5, 35, smoothT);
-  const camY = THREE.MathUtils.lerp(0.12, 0.08, smoothT);
-  const targetY = THREE.MathUtils.lerp(0.12, 0.08, smoothT);
-  const modelScale = THREE.MathUtils.lerp(1.35, 1.46, smoothT);
-  const modelY = THREE.MathUtils.lerp(-3.95, -4.26, smoothT);
+  // Mobile portrait framing:
+  // Elevates model and tightens distance to eliminate the large empty gap above the head
+  // while preserving full head, face, eyes, hair, and cybernetic jacket framing.
+  const camDist = THREE.MathUtils.lerp(2.22, 1.92, smoothT);
+  const fov = THREE.MathUtils.lerp(37, 35, smoothT);
+  const camY = THREE.MathUtils.lerp(0.06, 0.08, smoothT);
+  const targetY = THREE.MathUtils.lerp(0.06, 0.08, smoothT);
+  const modelScale = THREE.MathUtils.lerp(1.42, 1.46, smoothT);
+  const modelY = THREE.MathUtils.lerp(-4.00, -4.26, smoothT);
 
   return { camDist, camY, targetY, fov, modelScale, modelY };
 }
@@ -56,6 +61,7 @@ function ResponsiveCameraRig({ orbitRef }: { orbitRef: React.RefObject<any> }) {
   const { camera, size } = useThree();
 
   useLayoutEffect(() => {
+    if (!size.width || !size.height) return;
     const config = getResponsiveCameraConfig(size.width, size.height);
     const persCam = camera as THREE.PerspectiveCamera;
 
@@ -336,9 +342,11 @@ interface EyeTrackingCalibration {
 const Model = React.memo(function Model({
   onPointerUpdate,
   hairstyle = 'flowing',
+  onReady,
 }: {
   onPointerUpdate?: (x: number, y: number) => void;
   hairstyle?: HairstyleId;
+  onReady?: () => void;
 }) {
   const { size } = useThree();
   const group = useRef<THREE.Group>(null);
@@ -348,6 +356,7 @@ const Model = React.memo(function Model({
   const skinHeadMatRef = useRef<THREE.MeshStandardMaterial | null>(null);
   const neckLightRef = useRef<THREE.PointLight | null>(null);
   const [headBone, setHeadBone] = useState<THREE.Bone | null>(null);
+  const hasSignaledReadyRef = useRef(false);
 
   const uniformsRef = useRef<{ uTime: { value: number } }>({
     uTime: { value: 0 },
@@ -358,9 +367,8 @@ const Model = React.memo(function Model({
     undercutHair?: THREE.Mesh;
     samuraiBun?: THREE.Mesh;
     halfUpHair?: THREE.Mesh;
+    halfUpHairSecondary?: THREE.Mesh;
     halfUpScalp?: THREE.Mesh;
-    hairExtra1?: THREE.SkinnedMesh;
-    hairExtra2?: THREE.SkinnedMesh;
   }>({});
 
   // Quaternion refs for smooth, jitter-free 3D gaze tracking
@@ -375,6 +383,31 @@ const Model = React.memo(function Model({
   const tempHeadEulerRef = useRef(new THREE.Euler(0, 0, 0, 'YXZ'));
   const tempHeadDeltaQRef = useRef(new THREE.Quaternion());
   const tempNeckDeltaQRef = useRef(new THREE.Quaternion());
+
+  // Real-time speech & viseme lip sync state
+  const visemeStateRef = useRef<VisemeFrame>({
+    viseme: 'REST',
+    weight: 0,
+    jawOpen: 0,
+    lipRound: 0,
+    lipWidth: 0,
+    lipClosure: 0,
+    lipPress: 0,
+    smile: 0,
+    isPause: true,
+    word: '',
+    phraseType: 'REST',
+  });
+  const morphDampedWeightsRef = useRef<Record<number, number>>({});
+  const speechHeadYawRef = useRef(0);
+  const speechHeadPitchRef = useRef(0);
+
+  useEffect(() => {
+    const unsub = DaykanVoiceManager.getInstance().subscribeViseme((frame) => {
+      visemeStateRef.current = frame;
+    });
+    return unsub;
+  }, []);
 
   // Cached math objects to prevent garbage collection allocations in useFrame
   const raycasterRef = useRef(new THREE.Raycaster());
@@ -845,13 +878,22 @@ const Model = React.memo(function Model({
           ) {
             const hairMat = mat as THREE.MeshStandardMaterial;
             hairMat.transparent = true;
-            hairMat.alphaTest = 0.04;
+            hairMat.alphaTest = 0.06;
             hairMat.depthWrite = true;
             hairMat.depthTest = true;
             hairMat.side = THREE.DoubleSide; // Render both sides of each strand card
-            hairMat.roughness = 0.30; // Silky specular reflections
-            hairMat.metalness = 0.08;
-            hairMat.color = new THREE.Color('#121114'); // Rich, deep glossy black hair
+            hairMat.roughness = 0.26; // Silky specular reflections
+            hairMat.metalness = 0.06;
+            hairMat.color = new THREE.Color('#0C0B10'); // Deep obsidian black base
+
+            // Track hair meshes by material
+            if (matName.includes('Hair_3_Transparency')) {
+              hairMeshesRef.current.undercutHair = mesh;
+            } else if (matName.includes('Hair_2_Transparency')) {
+              hairMeshesRef.current.samuraiBun = mesh;
+            } else if (matName.includes('Hair_Transparency')) {
+              hairMeshesRef.current.halfUpHair = mesh;
+            }
 
             // Enhance strand density, feather hair roots at scalp, and add anisotropic specular sheen
             hairMat.onBeforeCompile = (shader) => {
@@ -867,28 +909,37 @@ const Model = React.memo(function Model({
                 #ifdef USE_MAP
                   vec4 hairSample = texture2D( map, vMapUv );
 
-                  // 1. Natural female hairline root taper:
-                  // For cards meeting the forehead scalp (high vMapUv.y in [0.86, 1.0]),
-                  // softly feather strand roots into the scalp.
-                  // This completely eliminates visible rectangular card edges while keeping individual strands crisp.
-                  float rootFade = 1.0;
-                  if (vMapUv.y > 0.86) {
-                    rootFade = smoothstep(1.0, 0.88, vMapUv.y);
-                  }
-                  hairSample.a *= mix(0.72, 1.0, rootFade);
+                  // 1. Natural female hairline root taper & soft card tip anti-aliasing:
+                  // Softly feather strand roots and fine strand tips to eliminate rectangular card borders
+                  float rootFade = smoothstep( 1.0, 0.88, vMapUv.y );
+                  float tipFade = smoothstep( 0.0, 0.10, vMapUv.y );
+                  hairSample.a *= mix( 0.50, 1.0, rootFade * tipFade );
 
-                  // 2. AAA Cinematic Dark Glossy Hair Tone:
-                  // Rich jet-espresso base with subtle warm brown depth
-                  vec3 deepBlack = vec3(0.045, 0.042, 0.048);
-                  vec3 warmEspresso = vec3(0.085, 0.072, 0.080);
-                  hairSample.rgb = mix(deepBlack, warmEspresso, hairSample.r * 0.45);
+                  // 2. Multi-Depth CGI Dark Obsidian / Espresso Hair Tone:
+                  // Deep obsidian roots with silky espresso strand body and natural depth occlusion
+                  float rootOcclusion = smoothstep(0.35, 0.92, vMapUv.y);
+                  vec3 obsidianRoot = vec3(0.012, 0.010, 0.015);
+                  vec3 espressoBody = vec3(0.050, 0.044, 0.054);
+                  vec3 hairBase = mix(obsidianRoot, espressoBody, (1.0 - rootOcclusion * 0.60) * hairSample.r);
 
+                  // Micro-strand optical striation: creates subtle strand separation across the hair card
+                  float strandVariation = sin(vMapUv.x * 65.0) * 0.07 + 0.93;
+                  hairBase *= strandVariation;
+
+                  // 3. Subtle Futuristic Electric-Blue / Cyan Specular Rim Highlights
+                  // Soft velvety grazing shimmer across strand contours without plastic shine
+                  vec3 viewD = normalize( -vViewPosition );
+                  vec3 normD = normalize( vNormal );
+                  float grazing = pow( 1.0 - clamp( dot( normD, viewD ), 0.0, 1.0 ), 3.8 );
+                  vec3 electricCyanGlint = vec3(0.015, 0.18, 0.32) * grazing * hairSample.r * 0.75;
+
+                  hairSample.rgb = hairBase + electricCyanGlint;
                   diffuseColor *= hairSample;
                 #endif
                 `
               );
 
-              // 3. Strand-aligned Anisotropic Specular Highlights (Kajiya-Kay / Marschner style)
+              // 4. Strand-aligned Anisotropic Specular Highlights (Kajiya-Kay / Marschner style)
               shader.fragmentShader = shader.fragmentShader.replace(
                 '#include <roughnessmap_fragment>',
                 `
@@ -896,7 +947,7 @@ const Model = React.memo(function Model({
                 #ifdef USE_MAP
                   vec4 strandSpec = texture2D( hairSpecularMap, vMapUv );
                   // Modulate roughness along strand lines for silky anisotropic reflections
-                  roughnessFactor = mix(0.24, 0.42, 1.0 - strandSpec.r);
+                  roughnessFactor = mix(0.20, 0.36, 1.0 - strandSpec.r);
                 #endif
                 `
               );
@@ -906,6 +957,7 @@ const Model = React.memo(function Model({
 
           if (matName.includes('Scalp_2_Transparency')) {
             const scalpMat = mat as THREE.MeshStandardMaterial;
+            hairMeshesRef.current.halfUpScalp = mesh;
             if (scalpDiffuseMap) {
               scalpDiffuseMap.colorSpace = THREE.SRGBColorSpace;
               scalpDiffuseMap.needsUpdate = true;
@@ -914,12 +966,12 @@ const Model = React.memo(function Model({
             scalpMat.transparent = true;
             scalpMat.depthWrite = false;
             scalpMat.depthTest = true;
-            scalpMat.opacity = 1.0;
+            scalpMat.opacity = 0.95;
             scalpMat.alphaTest = 0.01;
             scalpMat.side = THREE.FrontSide;
-            scalpMat.roughness = 0.65;
+            scalpMat.roughness = 0.55;
             scalpMat.metalness = 0.02;
-            scalpMat.color = new THREE.Color('#141216'); // Rich dark espresso black matching hair roots
+            scalpMat.color = new THREE.Color('#0A090D'); // Rich dark espresso black matching hair roots
 
             scalpMat.onBeforeCompile = (shader) => {
               shader.fragmentShader = shader.fragmentShader.replace(
@@ -929,9 +981,9 @@ const Model = React.memo(function Model({
                   vec4 scalpTex = texture2D( map, vMapUv );
                   // Smooth organic feathering curve for scalp edge:
                   // softly transitions baby hairs into the forehead skin without hard polygon cuts
-                  float feather = smoothstep(0.02, 0.45, scalpTex.a);
+                  float feather = smoothstep(0.04, 0.50, scalpTex.a);
                   scalpTex.a = feather;
-                  scalpTex.rgb = vec3(0.05, 0.045, 0.055);
+                  scalpTex.rgb = vec3(0.035, 0.030, 0.040);
                   diffuseColor *= scalpTex;
                 #endif
                 `
@@ -942,8 +994,8 @@ const Model = React.memo(function Model({
           }
 
           if (matName.includes('Scalp_3_Transparency')) {
-            // Scalp 3 belongs to undercut buzzcut which covers forehead - hide completely
             const scalpMat = mat as THREE.MeshStandardMaterial;
+            hairMeshesRef.current.undercutScalp = mesh;
             scalpMat.visible = false;
             scalpMat.opacity = 0.0;
             scalpMat.transparent = true;
@@ -955,8 +1007,121 @@ const Model = React.memo(function Model({
         if (child.name === 'Object_56' || child.name === 'mesh_32') hairMeshesRef.current.undercutScalp = child as THREE.Mesh;
         if (child.name === 'Object_57' || child.name === 'mesh_33') hairMeshesRef.current.undercutHair = child as THREE.Mesh;
         if (child.name === 'Object_59' || child.name === 'mesh_34') hairMeshesRef.current.samuraiBun = child as THREE.Mesh;
-        if (child.name === 'Object_61' || child.name === 'mesh_35') hairMeshesRef.current.halfUpHair = child as THREE.Mesh;
         if (child.name === 'Object_62' || child.name === 'mesh_36') hairMeshesRef.current.halfUpScalp = child as THREE.Mesh;
+
+        // Front / Top Hair: Organic volume elevation and layered strand refinement
+        if ((child.name === 'Object_61' || child.name === 'mesh_35') && (child as THREE.Mesh).isMesh) {
+          const halfUpMesh = child as THREE.Mesh;
+          hairMeshesRef.current.halfUpHair = halfUpMesh;
+
+          if (!halfUpMesh.userData.hasFrontHairVolumeApplied) {
+            halfUpMesh.userData.hasFrontHairVolumeApplied = true;
+
+            const geo = halfUpMesh.geometry.clone();
+            const pos = geo.attributes.position;
+            const uv = geo.attributes.uv;
+
+            for (let i = 0; i < pos.count; i++) {
+              const x = pos.getX(i);
+              const y = pos.getY(i);
+              const z = pos.getZ(i);
+              const v = uv ? uv.getY(i) : 0;
+
+              const dX = Math.abs(x - 6721);
+              // Lateral falloff: maintains broad feminine crown dome (dX up to 240) then softly tapers into sides (dX 440)
+              const latFactor = 1.0 - THREE.MathUtils.smoothstep(dX, 240, 440);
+              // Front/top crown region: rises smoothly from mid-head to front scalp
+              const frontZFactor = THREE.MathUtils.smoothstep(z, 900, 1450);
+              // Hairline anchor: softly tapers right at forehead edge so hairline remains locked to scalp
+              const hairlineTaper = 1.0 - THREE.MathUtils.smoothstep(z, 2220, 2370) * 0.75;
+              const zFactor = frontZFactor * hairlineTaper;
+              // Root anchor: anchors actual scalp insertion (v > 0.92) while releasing strand body for soft feminine volume
+              const rootAnchor = 1.0 - THREE.MathUtils.smoothstep(v, 0.90, 0.99);
+              const volumeWeight = latFactor * zFactor * rootAnchor;
+
+              if (volumeWeight > 0.005) {
+                // Strand group clustering: creates natural layered locks with depth channels between them
+                const strandCluster = Math.sin(x * 0.032 + z * 0.024);
+                const clusterVolume = 1.0 + strandCluster * 0.18; // +/- 18% depth variation between locks
+
+                // Rounded feminine crown dome (convex cosine profile across top, eliminating sharp mohawk ridge)
+                const domeFactor = Math.cos(Math.min(1.0, dX / 360) * Math.PI * 0.45);
+                const baseLiftY = (90.0 + 34.0 * THREE.MathUtils.smoothstep(z, 1300, 2050)) * volumeWeight * domeFactor;
+                const liftY = baseLiftY * clusterVolume;
+
+                const archZ = (46.0 + strandCluster * 8.0) * volumeWeight * THREE.MathUtils.smoothstep(z, 1150, 1950) * (1.0 - THREE.MathUtils.smoothstep(z, 2050, 2350) * 0.55);
+                const signX = (x >= 6721) ? 1.0 : -1.0;
+                const spreadX = signX * 22.0 * volumeWeight * THREE.MathUtils.smoothstep(dX, 50, 360);
+
+                // Feminine side-swept flow and soft organic strand drape
+                const sideSweep = 24.0 * volumeWeight * THREE.MathUtils.smoothstep(z, 1100, 2150);
+                const lockCurlX = Math.sin(y * 0.016 + z * 0.012) * 10.0 * volumeWeight;
+                const lockCurlY = Math.cos(x * 0.012 + z * 0.014) * 8.0 * volumeWeight;
+
+                pos.setXYZ(i, x + spreadX + sideSweep + lockCurlX, y + liftY + lockCurlY, z + archZ);
+              }
+            }
+            geo.computeVertexNormals();
+            halfUpMesh.geometry = geo;
+
+            // Secondary layered strand mesh: delicate feminine wisps, soft fringe layering & strand separation
+            if ((halfUpMesh as THREE.SkinnedMesh).isSkinnedMesh && halfUpMesh.parent) {
+              const skinnedHalfUp = halfUpMesh as THREE.SkinnedMesh;
+              const secGeo = halfUpMesh.geometry.clone();
+              const secPos = secGeo.attributes.position;
+              const secUv = secGeo.attributes.uv;
+
+              for (let i = 0; i < secPos.count; i++) {
+                const x = secPos.getX(i);
+                const y = secPos.getY(i);
+                const z = secPos.getZ(i);
+                const v = secUv ? secUv.getY(i) : 0;
+
+                const dX = Math.abs(x - 6721);
+                const secLatFactor = 1.0 - THREE.MathUtils.smoothstep(dX, 220, 420);
+                const frontZFactor = THREE.MathUtils.smoothstep(z, 980, 1500);
+                const hairlineTaper = 1.0 - THREE.MathUtils.smoothstep(z, 2200, 2370) * 0.80;
+                const rootAnchor = 1.0 - THREE.MathUtils.smoothstep(v, 0.88, 0.98);
+                const secWeight = secLatFactor * frontZFactor * hairlineTaper * rootAnchor;
+
+                if (secWeight > 0.008) {
+                  const secCluster = Math.sin(x * 0.028 - z * 0.03);
+                  const secDome = Math.cos(Math.min(1.0, dX / 340) * Math.PI * 0.45);
+                  const secLiftY = (36.0 + 14.0 * THREE.MathUtils.smoothstep(z, 1300, 2050)) * secWeight * secDome * (1.0 + secCluster * 0.20);
+                  const secArchZ = 24.0 * secWeight * THREE.MathUtils.smoothstep(z, 1200, 2000);
+                  const secSideSweep = 28.0 * secWeight * THREE.MathUtils.smoothstep(z, 1100, 2150);
+                  const secFlowX = secSideSweep + (Math.sin(x * 0.014 + y * 0.02) * 12.0 + secCluster * 6.0) * secWeight;
+                  secPos.setXYZ(i, x + secFlowX, y + secLiftY, z + secArchZ);
+                }
+              }
+              secGeo.computeVertexNormals();
+
+              const secMat = Array.isArray(halfUpMesh.material)
+                ? halfUpMesh.material[0].clone()
+                : (halfUpMesh.material as THREE.Material).clone();
+              if ((secMat as THREE.MeshStandardMaterial).isMeshStandardMaterial) {
+                const stdSecMat = secMat as THREE.MeshStandardMaterial;
+                stdSecMat.roughness = 0.25;
+                stdSecMat.alphaTest = 0.12;
+                stdSecMat.needsUpdate = true;
+              }
+
+              const secMesh = skinnedHalfUp.clone();
+              secMesh.name = 'HalfUpHair_Secondary_Layer';
+              secMesh.geometry = secGeo;
+              secMesh.material = secMat;
+              secMesh.skeleton = skinnedHalfUp.skeleton;
+              secMesh.bind(skinnedHalfUp.skeleton, skinnedHalfUp.bindMatrix);
+              secMesh.renderOrder = 4;
+              secMesh.frustumCulled = false;
+
+              if (skinnedHalfUp.parent) {
+                skinnedHalfUp.parent.add(secMesh);
+              }
+              hairMeshesRef.current.halfUpHairSecondary = secMesh;
+            }
+          }
+        }
       }
 
       // 3. Identify Head and Neck bones
@@ -1002,67 +1167,6 @@ const Model = React.memo(function Model({
         }
       }
     });
-
-    // 4. Create lush multi-layer hair strands for Half_up_Hair (mesh_35)
-    const baseHalfUpHair = hairMeshesRef.current.halfUpHair as THREE.SkinnedMesh | undefined;
-    if (baseHalfUpHair && baseHalfUpHair.geometry && baseHalfUpHair.parent) {
-      const parent = baseHalfUpHair.parent;
-
-      const createHairLayer = (
-        name: string,
-        normalOffset: number,
-        shiftX: number,
-        shiftY: number,
-        shiftZ: number
-      ) => {
-        const clonedGeo = baseHalfUpHair.geometry.clone();
-        const pos = clonedGeo.attributes.position;
-        const norm = clonedGeo.attributes.normal;
-        const uv = clonedGeo.attributes.uv;
-        if (pos && norm) {
-          for (let i = 0; i < pos.count; i++) {
-            const nx = norm.getX(i);
-            const ny = norm.getY(i);
-            const nz = norm.getZ(i);
-            const v = uv ? uv.getY(i) : 0.5;
-
-            // Attenuate volume offset near hairline roots (v in [0.78, 0.95])
-            // so hair roots remain 100% anchored and clean against scalp,
-            // while the hair body, crown, and sides gain rich, natural volume!
-            const volumeFactor = 1.0 - THREE.MathUtils.smoothstep(v, 0.78, 0.95);
-
-            pos.setXYZ(
-              i,
-              pos.getX(i) + (nx * normalOffset + shiftX) * volumeFactor,
-              pos.getY(i) + (ny * normalOffset + shiftY) * volumeFactor,
-              pos.getZ(i) + (nz * normalOffset + shiftZ) * volumeFactor
-            );
-          }
-          pos.needsUpdate = true;
-          clonedGeo.computeVertexNormals();
-        }
-
-        const layerMesh = new THREE.SkinnedMesh(clonedGeo, baseHalfUpHair.material);
-        layerMesh.bind(baseHalfUpHair.skeleton, baseHalfUpHair.bindMatrix);
-        layerMesh.name = name;
-        layerMesh.frustumCulled = true;
-        layerMesh.renderOrder = 2;
-        layerMesh.castShadow = false;
-        return layerMesh;
-      };
-
-      if (!parent.getObjectByName('Half_up_Hair_Extra_1')) {
-        const extra1 = createHairLayer('Half_up_Hair_Extra_1', 6.0, 1.5, 2.0, -1.0);
-        parent.add(extra1);
-        hairMeshesRef.current.hairExtra1 = extra1;
-      }
-
-      if (!parent.getObjectByName('Half_up_Hair_Extra_2')) {
-        const extra2 = createHairLayer('Half_up_Hair_Extra_2', -4.0, -1.2, -1.5, 1.0);
-        parent.add(extra2);
-        hairMeshesRef.current.hairExtra2 = extra2;
-      }
-    }
 
     bonesRef.current = foundBones;
     baseRotationsRef.current = baseRotations;
@@ -1120,34 +1224,50 @@ const Model = React.memo(function Model({
     };
   }, [actions, names]);
 
-  // Default original model hair
+  // Premium Futuristic Short Pixie / Textured Crop:
+  // Combines the crown/top textured hair (halfUpHair) with the clean tapered sides (undercutHair)
+  // and the natural feathered scalp base, creating a feminine, well-groomed, elegant silhouette.
   useEffect(() => {
-    const { undercutScalp, undercutHair, samuraiBun, halfUpHair, halfUpScalp, hairExtra1, hairExtra2 } = hairMeshesRef.current;
+    const { undercutScalp, undercutHair, samuraiBun, halfUpHair, halfUpHairSecondary, halfUpScalp } = hairMeshesRef.current;
     if (halfUpHair) {
       halfUpHair.visible = true;
-      halfUpHair.renderOrder = 2;
+      halfUpHair.renderOrder = 3;
       if (halfUpHair.parent) halfUpHair.parent.visible = true;
+    }
+    if (halfUpHairSecondary) {
+      halfUpHairSecondary.visible = true;
+      halfUpHairSecondary.renderOrder = 4;
+      if (halfUpHairSecondary.parent) halfUpHairSecondary.parent.visible = true;
     }
     if (halfUpScalp) {
       halfUpScalp.visible = true;
       halfUpScalp.renderOrder = 1;
       if (halfUpScalp.parent) halfUpScalp.parent.visible = true;
     }
-    if (hairExtra1) {
-      hairExtra1.visible = true;
-      hairExtra1.renderOrder = 2;
+    if (undercutHair) {
+      undercutHair.visible = true;
+      undercutHair.renderOrder = 2;
+      if (undercutHair.parent) undercutHair.parent.visible = true;
     }
-    if (hairExtra2) {
-      hairExtra2.visible = true;
-      hairExtra2.renderOrder = 2;
+    if (samuraiBun) {
+      samuraiBun.visible = false;
     }
-    if (samuraiBun) samuraiBun.visible = false;
     if (undercutScalp) undercutScalp.visible = false;
-    if (undercutHair) undercutHair.visible = false;
+    if (halfUpHairSecondary && hairstyle === 'bun') {
+      halfUpHairSecondary.visible = false;
+    }
   }, [hairstyle]);
 
   // Real-time Face & Head Mouse Tracking
   useFrame((state, delta) => {
+    // Notify parent container as soon as the model is active and rendering its first frame
+    if (!hasSignaledReadyRef.current) {
+      hasSignaledReadyRef.current = true;
+      if (onReady) {
+        onReady();
+      }
+    }
+
     uniformsRef.current.uTime.value = state.clock.elapsedTime;
 
     const t = state.clock.elapsedTime;
@@ -1202,18 +1322,102 @@ const Model = React.memo(function Model({
       : 0.0;
 
     // Apply synchronized natural blink (target 16: left eyelid, target 17: right eyelid)
-    if (headMeshRef.current && headMeshRef.current.morphTargetInfluences) {
+    if (headMeshRef.current && headMeshRef.current.morphTargetInfluences && headMeshRef.current.morphTargetInfluences.length > 17) {
       headMeshRef.current.morphTargetInfluences[16] = blinkWeight;
       headMeshRef.current.morphTargetInfluences[17] = blinkWeight;
     }
-    if (eyelashMeshRef.current && eyelashMeshRef.current.morphTargetInfluences) {
+    if (eyelashMeshRef.current && eyelashMeshRef.current.morphTargetInfluences && eyelashMeshRef.current.morphTargetInfluences.length > 17) {
       eyelashMeshRef.current.morphTargetInfluences[16] = blinkWeight;
       eyelashMeshRef.current.morphTargetInfluences[17] = blinkWeight;
     }
 
+    // -------------------------------------------------------------
+    // REAL-TIME SPEECH & VISEME LIP-SYNC LAYER
+    // Pure, anatomical, non-destructive lip morph targets.
+    // Preserves 100% of the skeletal rig, chin, jawline, teeth, and rest pose.
+    // -------------------------------------------------------------
+    const bones = bonesRef.current;
+    const visemeData = visemeStateRef.current;
+
+    // High-Precision Pure Lip Morph Targets on Head Mesh (Targets 116, 46, 47, 110, 111, 80, 81, 115, 114, 50, 51)
+    // All of these have 0.0 neck displacement and 0% chin deformation.
+    if (headMeshRef.current && headMeshRef.current.morphTargetInfluences) {
+      const influences = headMeshRef.current.morphTargetInfluences;
+      const targetMap = morphDampedWeightsRef.current;
+
+      const rawTargets: Record<number, number> = {
+        116: 0, // Natural lower lip drop / mouth opening
+        46: 0,  // Subtle upper lip lift R
+        47: 0,  // Subtle upper lip lift L
+        110: 0, // Mouth corner wide R
+        111: 0, // Mouth corner wide L
+        80: 0,  // Lip rounding / pucker R
+        81: 0,  // Lip rounding / pucker L
+        115: 0, // Bilabial closure (M, B, P)
+        114: 0, // Lower lip press / labiodental (F, V)
+        50: 0,  // Friendly subtle cheek/smile warmth R
+        51: 0,  // Friendly subtle cheek/smile warmth L
+      };
+
+      if (!visemeData.isPause && visemeData.weight > 0.01) {
+        // Active speaking articulation
+        // 1. Lower lip opening & jaw drop effect (pure lip morph 116)
+        rawTargets[116] = Math.min(0.44, visemeData.jawOpen * 0.44);
+
+        // 2. Subtle upper lip raise supporting open vowels
+        const upperLift = Math.min(0.14, visemeData.jawOpen * 0.14);
+        rawTargets[46] = upperLift;
+        rawTargets[47] = upperLift;
+
+        // 3. Mouth corners widening (E, I, and smile engagement)
+        const cornerWide = Math.min(0.36, visemeData.lipWidth * 0.35 + visemeData.smile * 0.08);
+        rawTargets[110] = cornerWide;
+        rawTargets[111] = cornerWide;
+
+        // 4. Lip rounding & funneling (O, U, W)
+        const roundPucker = Math.min(0.42, visemeData.lipRound * 0.40);
+        rawTargets[80] = roundPucker;
+        rawTargets[81] = roundPucker;
+
+        // 5. Bilabial lip closure (M, B, P)
+        // Notice: when M, B, P occurs, closure suppresses mouth opening for a crisp seal!
+        const closure = Math.min(0.48, visemeData.lipClosure * 0.48);
+        if (closure > 0.08) {
+          rawTargets[115] = closure;
+          rawTargets[116] = Math.max(0, rawTargets[116] - closure * 0.95);
+        }
+
+        // 6. Lower lip tuck & labiodental (F, V, TH)
+        rawTargets[114] = Math.min(0.28, visemeData.lipPress * 0.28);
+
+        // 7. Subtle humanoid facial engagement & cheek warmth
+        const cheekWarmth = Math.min(0.15, visemeData.smile * 0.15);
+        rawTargets[50] = cheekWarmth;
+        rawTargets[51] = cheekWarmth;
+      } else {
+        // Natural micro-pause / resting presence
+        // Cheeks maintain slight warm intelligent baseline, mouth is closed
+        const baseWarmth = visemeData.smile > 0 ? Math.min(0.08, visemeData.smile * 0.08) : 0;
+        rawTargets[50] = baseWarmth;
+        rawTargets[51] = baseWarmth;
+      }
+
+      // Smoothly damp all speech morph target influences and reset cleanly to 0
+      const speechKeys = [116, 46, 47, 110, 111, 80, 81, 115, 114, 50, 51];
+      for (const idx of speechKeys) {
+        if (idx < influences.length) {
+          const desired = rawTargets[idx] || 0;
+          const cur = targetMap[idx] || 0;
+          let next = THREE.MathUtils.damp(cur, desired, 26, delta);
+          if (Math.abs(next) < 0.001) next = 0;
+          targetMap[idx] = next;
+          influences[idx] = next;
+        }
+      }
+    }
+
     // Proximity & Height Safety Guard:
     // Guarantees that neither hand can ever raise towards the head, forehead, or hair
-    const bones = bonesRef.current;
     if (bones.head) {
       const headPos = headWorldPosRef.current;
       const handPos = handWorldPosRef.current;
@@ -1333,10 +1537,44 @@ const Model = React.memo(function Model({
         headGazeScale = THREE.MathUtils.clamp(excess, 0, 1) * velocityWeight;
       }
 
-      // Very subtle, conservative rotation limits:
-      // Head follows ~20% of yaw (max ~0.055 rad / ~3.1°), ~10% of pitch (max ~0.025 rad / ~1.4°). Horizontal > Vertical.
-      const subtleHeadYaw = THREE.MathUtils.clamp(rawGazeYaw * 0.20 * headGazeScale, -0.055, 0.055);
-      const subtleHeadPitch = THREE.MathUtils.clamp(-rawGazePitch * 0.10 * headGazeScale, -0.025, 0.025);
+      // Controlled, sophisticated humanoid robotic speaking orientation:
+      // Subtly reinforces natural speech phrases without any continuous nodding or shaking
+      let targetSpeechYaw = 0.0;
+      let targetSpeechPitch = 0.0;
+
+      if (!visemeData.isPause) {
+        if (visemeData.phraseType === 'GREETING') {
+          // "Hello": subtle polite greeting orientation
+          targetSpeechYaw = 0.008;
+          targetSpeechPitch = -0.010;
+        } else if (visemeData.phraseType === 'STATEMENT') {
+          // Confident, calm humanoid posture during credentials
+          targetSpeechYaw = 0.002;
+          targetSpeechPitch = -0.005;
+        } else if (visemeData.phraseType === 'EMPHASIS') {
+          // "Today": slight deliberate focal adjustment
+          targetSpeechYaw = -0.006;
+          targetSpeechPitch = -0.012;
+        } else if (visemeData.phraseType === 'QUESTION') {
+          // "how can I help you?": slight attentive question tilt
+          targetSpeechYaw = -0.014;
+          targetSpeechPitch = -0.016;
+        }
+      }
+
+      speechHeadYawRef.current = THREE.MathUtils.damp(speechHeadYawRef.current, targetSpeechYaw, 3.5, delta);
+      speechHeadPitchRef.current = THREE.MathUtils.damp(speechHeadPitchRef.current, targetSpeechPitch, 3.5, delta);
+
+      const subtleHeadYaw = THREE.MathUtils.clamp(
+        rawGazeYaw * 0.20 * headGazeScale + speechHeadYawRef.current,
+        -0.065,
+        0.065
+      );
+      const subtleHeadPitch = THREE.MathUtils.clamp(
+        -rawGazePitch * 0.10 * headGazeScale + speechHeadPitchRef.current,
+        -0.040,
+        0.040
+      );
 
       // Subtle breathing & idle life micro-movements
       const microYaw = Math.sin(t * 0.45) * 0.002 + Math.sin(t * 0.18) * 0.001;
@@ -1517,6 +1755,8 @@ useTexture.preload('/models/head_diffuse.png?v=8');
 useTexture.preload('/models/head_normal.png?v=6');
 useTexture.preload('/models/eye_diffuse.png?v=3');
 useTexture.preload('/models/eye_normal.png?v=3');
+useTexture.preload('/models/hair_specular.png');
+useTexture.preload('/models/scalp_diffuse.png');
 
 export function MiaModel({ className = '', showStatusLabel = true }: MiaModelProps) {
   const [mounted, setMounted] = useState(false);
@@ -1535,6 +1775,10 @@ export function MiaModel({ className = '', showStatusLabel = true }: MiaModelPro
   // Real Three.js asset loading tracker
   const { active, progress: realProgress, item, loaded, total } = useProgress();
   const [hasCompletedInitialLoad, setHasCompletedInitialLoad] = useState(false);
+  const [isModelReady, setIsModelReady] = useState(false);
+  const handleModelReady = useCallback(() => {
+    setIsModelReady(true);
+  }, []);
 
   // Smooth progress state (0 to 100)
   const [displayProgress, setDisplayProgress] = useState(0);
@@ -1560,7 +1804,7 @@ export function MiaModel({ className = '', showStatusLabel = true }: MiaModelPro
     setMounted(true);
   }, []);
 
-  // 1. Advance targetProgress smoothly
+  // 1. Advance targetProgress smoothly and coordinate with model readiness
   useEffect(() => {
     if (hasCompletedInitialLoad && !manualTrigger) return;
 
@@ -1570,12 +1814,14 @@ export function MiaModel({ className = '', showStatusLabel = true }: MiaModelPro
       return;
     }
 
-    if (!active && realProgress === 100) {
+    if (isModelReady) {
       targetProgressRef.current = 100;
+    } else if (!active && realProgress === 100) {
+      targetProgressRef.current = Math.max(targetProgressRef.current, 95);
     } else {
-      targetProgressRef.current = Math.max(targetProgressRef.current, realProgress);
+      targetProgressRef.current = Math.max(targetProgressRef.current, Math.min(92, realProgress * 0.95));
     }
-  }, [active, realProgress, hasCompletedInitialLoad, manualTrigger]);
+  }, [active, realProgress, hasCompletedInitialLoad, manualTrigger, isModelReady]);
 
   // 2. 60FPS Fluid Progress Interpolator (Zero chunky jumps, guaranteed smooth ramp)
   useEffect(() => {
@@ -1591,13 +1837,14 @@ export function MiaModel({ className = '', showStatusLabel = true }: MiaModelPro
       if (manualTrigger) {
         targetProgressRef.current = Math.min(100, targetProgressRef.current + dt * 65);
       } else {
-        // Continuous smooth ramp for guaranteed visual prestige
-        targetProgressRef.current = Math.max(
-          targetProgressRef.current,
-          Math.min(95, targetProgressRef.current + dt * 55)
-        );
-        if (!active && realProgress === 100) {
+        if (isModelReady) {
           targetProgressRef.current = 100;
+        } else {
+          // Continuous smooth ramp for guaranteed visual prestige up to 95% while model prepares
+          targetProgressRef.current = Math.max(
+            targetProgressRef.current,
+            Math.min(95, targetProgressRef.current + dt * 45)
+          );
         }
       }
 
@@ -1610,7 +1857,7 @@ export function MiaModel({ className = '', showStatusLabel = true }: MiaModelPro
           return 100;
         }
 
-        const step = Math.max(diff * 5.8 * dt, dt * 32);
+        const step = Math.max(diff * 6.2 * dt, dt * 28);
         return Math.min(target, prev + step);
       });
 
@@ -1619,11 +1866,11 @@ export function MiaModel({ className = '', showStatusLabel = true }: MiaModelPro
 
     animId = requestAnimationFrame(updateProgress);
     return () => cancelAnimationFrame(animId);
-  }, [hasCompletedInitialLoad, manualTrigger, active, realProgress]);
+  }, [hasCompletedInitialLoad, manualTrigger, isModelReady]);
 
-  // 3. Graceful Completion Sequence once displayProgress hits 100
+  // 3. Graceful Completion Sequence once displayProgress hits 100 AND model is verified ready
   useEffect(() => {
-    if (displayProgress >= 100 && !isCompletingRef.current && (showHUD || manualTrigger)) {
+    if (displayProgress >= 100 && (isModelReady || manualTrigger) && !isCompletingRef.current && (showHUD || manualTrigger)) {
       isCompletingRef.current = true;
 
       // Begin hologram quantum dissolve & reveal real 3D model
@@ -1655,7 +1902,22 @@ export function MiaModel({ className = '', showStatusLabel = true }: MiaModelPro
         clearTimeout(completeTimer);
       };
     }
-  }, [displayProgress, showHUD, manualTrigger, setIsSiteLoading]);
+  }, [displayProgress, isModelReady, showHUD, manualTrigger, setIsSiteLoading]);
+
+  // Safety watchdog: If network or asset loading hangs for > 15 seconds on very slow connections, gracefully complete
+  // so the user is never stuck on a loading screen or locked scroll
+  useEffect(() => {
+    if (hasCompletedInitialLoad) return;
+    const safetyTimer = setTimeout(() => {
+      if (!isModelReady) {
+        console.warn('MiaModel: Asset loading reached safety watchdog window. Completing initialization gracefully.');
+        setIsModelReady(true);
+        targetProgressRef.current = 100;
+        setDisplayProgress(100);
+      }
+    }, 15000);
+    return () => clearTimeout(safetyTimer);
+  }, [isModelReady, hasCompletedInitialLoad]);
 
   const handleReplay = () => {
     isCompletingRef.current = false;
@@ -1674,6 +1936,7 @@ export function MiaModel({ className = '', showStatusLabel = true }: MiaModelPro
     isCompletingRef.current = true;
     targetProgressRef.current = 100;
     setDisplayProgress(100);
+    setIsModelReady(true);
     setIsHologramDissolving(true);
     setShowRealModel(true);
     setShowHUD(false);
@@ -1773,7 +2036,7 @@ export function MiaModel({ className = '', showStatusLabel = true }: MiaModelPro
       )}
 
       {/* 3. 4K Ultra-HD 3D WebGL Canvas Layer (Ultra Fast, Zero Lag) */}
-      <div className="absolute inset-0 w-full h-full z-10">
+      <div className="absolute inset-0 w-full h-full z-10 pointer-events-none md:pointer-events-auto">
         <Canvas
           dpr={[1, 1.75]} // 4K retina clamping for locked 60+ FPS
           camera={{ position: [0, 0.08, 1.92], fov: 35 }}
@@ -1787,7 +2050,8 @@ export function MiaModel({ className = '', showStatusLabel = true }: MiaModelPro
             toneMapping: THREE.ACESFilmicToneMapping,
             toneMappingExposure: 1.16,
           }}
-          className="w-full h-full cursor-grab active:cursor-grabbing"
+          className="w-full h-full cursor-grab active:cursor-grabbing touch-pan-y"
+          style={{ touchAction: 'pan-y' }}
         >
           {/* Background Precompilation */}
           <PrecompilePipeline />
@@ -1795,8 +2059,10 @@ export function MiaModel({ className = '', showStatusLabel = true }: MiaModelPro
           {/* 4K Studio Lighting */}
           <StudioLighting />
 
-          {/* Realistic PBR Environment Reflections */}
-          <Environment preset="city" environmentIntensity={0.4} />
+          {/* Realistic PBR Environment Reflections - wrapped in Suspense so network CDN never blocks Canvas */}
+          <Suspense fallback={null}>
+            <Environment preset="city" environmentIntensity={0.4} />
+          </Suspense>
 
           {/* 3D Holographic Wireframe Model Builder (Active during loading & dissolve) */}
           {showHologram && (
@@ -1812,6 +2078,7 @@ export function MiaModel({ className = '', showStatusLabel = true }: MiaModelPro
               <Model
                 hairstyle={hairstyle}
                 onPointerUpdate={handlePointerUpdate}
+                onReady={handleModelReady}
               />
             </group>
           </Suspense>
@@ -1819,12 +2086,16 @@ export function MiaModel({ className = '', showStatusLabel = true }: MiaModelPro
           {/* Dynamic Responsive Camera Rig */}
           <ResponsiveCameraRig orbitRef={orbitControlsRef} />
 
-          {/* OrbitControls */}
+          {/* OrbitControls - Enabled for desktop mouse drag; touch controls set to NONE to guarantee 100% smooth mobile scrolling */}
           <OrbitControls
             ref={orbitControlsRef}
             target={[0, 0.08, 0]}
             enableZoom={false}
             enablePan={false}
+            touches={{
+              ONE: (THREE.TOUCH as any).NONE ?? 0,
+              TWO: (THREE.TOUCH as any).NONE ?? 0,
+            }}
             minPolarAngle={Math.PI / 2.5}
             maxPolarAngle={Math.PI / 1.7}
             minAzimuthAngle={-Math.PI / 3.5}
@@ -1864,6 +2135,9 @@ export function MiaModel({ className = '', showStatusLabel = true }: MiaModelPro
           </span>
         </div>
       </div>
+
+      {/* 5. Real-Time AI Robot Voice, Microphone & Speech Assistant Widget */}
+      {showRealModel && !showHUD && <DaykanVoiceWidget />}
     </div>
   );
 }

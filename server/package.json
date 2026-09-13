@@ -5,7 +5,11 @@
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "kokoro:start": "..\\ai\\kokoro\\venv\\Scripts\\python.exe ..\\ai\\kokoro\\server.py --port 8880",
+    "kokoro:test": "..\\ai\\kokoro\\venv\\Scripts\\python.exe ..\\ai\\kokoro\\test_tts.py",
+    "tts:start": "..\\ai\\kokoro\\venv\\Scripts\\python.exe ..\\ai\\kokoro\\server.py --port 8880",
+    "tts:test": "..\\ai\\kokoro\\venv\\Scripts\\python.exe ..\\ai\\kokoro\\test_tts.py"
   },
   "dependencies": {
     "express": "^4.21.1",

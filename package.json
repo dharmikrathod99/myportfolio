@@ -1,0 +1,16 @@
+{
+  "name": "dharmik-portfolio-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "kokoro:start": "ai\\kokoro\\venv\\Scripts\\python.exe ai/kokoro/server.py --port 8880",
+    "kokoro:test": "ai\\kokoro\\venv\\Scripts\\python.exe ai/kokoro/test_tts.py",
+    "tts:start": "ai\\kokoro\\venv\\Scripts\\python.exe ai/kokoro/server.py --port 8880",
+    "tts:test": "ai\\kokoro\\venv\\Scripts\\python.exe ai/kokoro/test_tts.py",
+    "magpie:start": "nemo-speech serve --tts-model magpie --port 8012 --host 127.0.0.1 --no-ui",
+    "magpie:test": "nemo-speech synthesize -o magpie-test.wav --language en-US --force \"Hello, I am Daykan. This is a local Magpie TTS test.\"",
+    "dev:client": "npm --prefix client run dev",
+    "dev:server": "npm --prefix server run dev",
+    "dev:daykan": "ai\\kokoro\\venv\\Scripts\\python.exe ai/kokoro/server.py --port 8880"
+  }
+}

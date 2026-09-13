@@ -4,6 +4,7 @@ import { setupSecurityMiddleware } from './middleware/security';
 import { apiRateLimiter } from './middleware/rateLimiter';
 import contactRouter from './routes/contact';
 import statsRouter from './routes/stats';
+import daykanRouter from './routes/daykan';
 
 dotenv.config();
 
@@ -26,6 +27,7 @@ app.get('/health', (_req, res) => {
 // API Routes
 app.use('/api/contact', contactRouter);
 app.use('/api/stats', statsRouter);
+app.use('/api/daykan', daykanRouter);
 
 // Start server
 app.listen(PORT, () => {

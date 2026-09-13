@@ -1,0 +1,6 @@
+# Core dependencies for Kokoro-82M TTS Server
+torch>=2.0.0
+kokoro>=0.9.4
+soundfile>=0.12.1
+numpy>=1.24.0
+misaki[en]>=0.9.4

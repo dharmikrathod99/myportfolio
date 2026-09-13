@@ -14,6 +14,29 @@ dist-ssr/
 *.tsbuildinfo
 next-env.d.ts
 
+# Python virtual environments & cache
+venv/
+.venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.pytest_cache/
+*.mypy_cache/
+
+# Audio outputs & test artifacts
+*.wav
+*.mp3
+!client/public/audio/*.mp3
+!client/public/audio/*.vtt
+!client/public/audio/*.json
+ai/kokoro/output/
+
+# Temporary test scripts
+hindi_text.txt
+client/check_mesh35.py
+client/inspect_m35_acc.py
+
 # Environment Variables
 .env
 .env.local
