@@ -75,7 +75,7 @@ export interface ScheduledSegment {
 }
 
 export const DEFAULT_DAYKAN_GREETING =
-  "Hello, I am Daykan. I was developed by Dharmik Rathod, who's known as D.R Developer. Today, how can I help you?";
+  "Hello, I am Diykan. I was developed by Dharmik Rathod, who's known as D.R Developer. Today, how can I help you?";
 
 /**
  * Generates dynamic phonetic timing and viseme modulation for any arbitrary response

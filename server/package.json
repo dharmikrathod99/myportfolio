@@ -9,7 +9,8 @@
     "kokoro:start": "..\\ai\\kokoro\\venv\\Scripts\\python.exe ..\\ai\\kokoro\\server.py --port 8880",
     "kokoro:test": "..\\ai\\kokoro\\venv\\Scripts\\python.exe ..\\ai\\kokoro\\test_tts.py",
     "tts:start": "..\\ai\\kokoro\\venv\\Scripts\\python.exe ..\\ai\\kokoro\\server.py --port 8880",
-    "tts:test": "..\\ai\\kokoro\\venv\\Scripts\\python.exe ..\\ai\\kokoro\\test_tts.py"
+    "tts:test": "..\\ai\\kokoro\\venv\\Scripts\\python.exe ..\\ai\\kokoro\\test_tts.py",
+    "jarvis:start": "..\\Mark-LIII-main\\.venv\\Scripts\\python.exe ..\\Mark-LIII-main\\jarvis_service.py --port 8005"
   },
   "dependencies": {
     "express": "^4.21.1",

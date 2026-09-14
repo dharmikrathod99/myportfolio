@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
         reply = "It was created by its open-source development community and core software engineering team.";
       }
     } else if (cleanQ === 'who are you' || cleanQ.includes('who are you')) {
-      reply = "I’m Daykan, Dharmik Rathod’s personal AI assistant. I was developed as part of his D.R Developer portfolio. How can I help you?";
+      reply = "I’m Diykan, Dharmik Rathod’s personal AI assistant. I was developed as part of his D.R Developer portfolio. How can I help you?";
     } else if (
       cleanQ.includes('who developed you') ||
       cleanQ.includes('who created you') ||

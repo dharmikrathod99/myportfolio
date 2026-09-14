@@ -28,6 +28,7 @@ app.get('/health', (_req, res) => {
 app.use('/api/contact', contactRouter);
 app.use('/api/stats', statsRouter);
 app.use('/api/daykan', daykanRouter);
+app.use('/api/diykan', daykanRouter);
 
 // Start server
 app.listen(PORT, () => {

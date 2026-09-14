@@ -9,7 +9,7 @@ def main():
     # 'a' = American English, 'b' = British English
     pipeline = KPipeline(lang_code='a')
 
-    text = "Hello, I am Daykan. I was developed by Dharmik Rathod, who's known as D.R Developer. Today, how can I help you?"
+    text = "Hello, I am Diykan. I was developed by Dharmik Rathod, who's known as D.R Developer. Today, how can I help you?"
     voice = 'af_heart' # High-quality natural female voice
     
     print(f"[Kokoro Test] Generating speech using voice: {voice}")

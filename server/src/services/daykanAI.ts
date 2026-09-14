@@ -12,7 +12,7 @@ export interface DaykanAIResponse {
   tokensUsed?: number;
 }
 
-export const DAYKAN_SYSTEM_PROMPT = `You are Daykan, the personal AI assistant created by Dharmik Rathod, known as D.R Developer.
+export const DAYKAN_SYSTEM_PROMPT = `You are Diykan, the personal AI assistant created by Dharmik Rathod, known as D.R Developer.
 
 Your primary job is to understand the user's current message and provide the most relevant, accurate, useful, and natural response.
 
@@ -23,7 +23,7 @@ IMPORTANT BEHAVIOR RULES:
 2. NEVER repeat your introduction unless the user specifically asks who you are.
 
 3. Do not begin every response with:
-   'I am Daykan...'
+   'I am Diykan...'
    'I am Dharmik Rathod's personal AI assistant...'
    or similar wording.
 
@@ -75,8 +75,14 @@ export class DaykanConversationalAIService implements IDaykanAIService {
   private endpoint: string;
   private apiKey: string;
   private modelName: string;
+  private jarvisUrl: string;
 
   constructor() {
+    this.jarvisUrl = (
+      process.env.JARVIS_SERVICE_URL ||
+      process.env.MARK_LIII_API_URL ||
+      'http://127.0.0.1:8005'
+    ).replace(/\/$/, '');
     this.endpoint = (
       process.env.GPT_OSS_ENDPOINT ||
       process.env.LLM_BASE_URL ||
@@ -107,7 +113,35 @@ export class DaykanConversationalAIService implements IDaykanAIService {
       .filter((h) => h && h.content && h.content.trim())
       .slice(-8);
 
-    // 1. Try external or local LLM server if configured
+    // 1. Primary: Query Mark-LIII JARVIS AI & Workflow Service
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 35000);
+
+      const jarvisRes = await fetch(`${this.jarvisUrl}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: trimmedInput,
+          history: sanitizedHistory,
+          conversationId: 'daykan_web_session',
+        }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (jarvisRes.ok) {
+        const data = await jarvisRes.json();
+        if (data.success && data.reply && typeof data.reply === 'string' && data.reply.trim()) {
+          console.log(`[JARVIS BRAIN RESPONSE]\n"${data.reply.trim()}"`);
+          return { reply: data.reply.trim() };
+        }
+      }
+    } catch (jarvisErr: any) {
+      console.warn('[Daykan] JARVIS bridge service offline or timed out, trying fallback:', jarvisErr?.message || jarvisErr);
+    }
+
+    // 2. Secondary: Try external or local LLM server if configured
     const isLocalEndpoint =
       this.endpoint.includes('localhost') ||
       this.endpoint.includes('127.0.0.1') ||
@@ -242,7 +276,7 @@ export class DaykanConversationalAIService implements IDaykanAIService {
       cleanQ.includes('who are you') ||
       cleanQ.includes('what is your name')
     ) {
-      return "I’m Daykan, Dharmik Rathod’s personal AI assistant. I was developed as part of his D.R Developer portfolio. How can I help you?";
+      return "I’m Diykan, Dharmik Rathod’s personal AI assistant. I was developed as part of his D.R Developer portfolio. How can I help you?";
     }
 
     if (

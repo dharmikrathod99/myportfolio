@@ -147,18 +147,24 @@ def main():
     print(f" Default Voice: {args.voice}")
     print("=" * 60)
 
-    # Load model ONCE into memory
-    print("[Kokoro-82M] Loading model into memory (once)...")
+    # Optimize PyTorch CPU memory footprint
+    try:
+        torch.set_num_threads(1)
+    except Exception:
+        pass
+
+    server_address = (args.host, args.port)
+    httpd = ThreadedHTTPServer(server_address, KokoroRequestHandler)
+    print(f"[Kokoro-82M] HTTP Server bound on http://{args.host}:{args.port}")
+    print(f"  - Health Endpoint:  GET  http://{args.host}:{args.port}/health")
+    print(f"  - Speech Synthesis: POST http://{args.host}:{args.port}/tts")
+
+    # Load model into memory
+    print("[Kokoro-82M] Loading model into memory...")
     pipeline = KPipeline(lang_code=DEFAULT_LANG, repo_id='hexgrad/Kokoro-82M')
     print("[Kokoro-82M] Pre-warming voice pack...")
     pipeline.load_voice(args.voice)
     print("[Kokoro-82M] Model ready and cached in RAM.")
-
-    server_address = (args.host, args.port)
-    httpd = ThreadedHTTPServer(server_address, KokoroRequestHandler)
-    print(f"[Kokoro-82M] HTTP Server running on http://{args.host}:{args.port}")
-    print(f"  - Health Endpoint:  GET  http://{args.host}:{args.port}/health")
-    print(f"  - Speech Synthesis: POST http://{args.host}:{args.port}/tts")
     print("=" * 60)
 
     try:

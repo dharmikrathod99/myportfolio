@@ -37,16 +37,21 @@ hindi_text.txt
 client/check_mesh35.py
 client/inspect_m35_acc.py
 
-# Environment Variables
+# Environment Variables & Secrets
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 *.env
+**/config/api_keys.json
+api_keys.json
+**/memory/long_term.json
+**/memory/*.db
 
-# Keep example env files
+# Keep example env and config files
 !.env.example
+!**/config/api_keys.json.example
 
 # Logs
 logs/

@@ -31,10 +31,11 @@ export function DaykanVoiceWidget({ className = '' }: DaykanVoiceWidgetProps) {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
-    const queryParam = params.get('query') || params.get('daykan_query');
+    const queryParam = params.get('query') || params.get('diykan_query') || params.get('daykan_query');
     if (queryParam) {
       const url = new URL(window.location.href);
       url.searchParams.delete('query');
+      url.searchParams.delete('diykan_query');
       url.searchParams.delete('daykan_query');
       window.history.replaceState({}, '', url.toString());
 
@@ -44,6 +45,16 @@ export function DaykanVoiceWidget({ className = '' }: DaykanVoiceWidgetProps) {
       return () => clearTimeout(timer);
     }
   }, [manager]);
+
+  // Auto-hide terminal 8 seconds after speech & processing complete
+  useEffect(() => {
+    if (voiceState === 'IDLE' && subtitle) {
+      const hideTimer = setTimeout(() => {
+        setSubtitle('');
+      }, 8000);
+      return () => clearTimeout(hideTimer);
+    }
+  }, [voiceState, subtitle]);
 
   const handleMicClick = () => {
     if (voiceState === 'LISTENING') {
@@ -70,68 +81,80 @@ export function DaykanVoiceWidget({ className = '' }: DaykanVoiceWidgetProps) {
 
   return (
     <div
-      className={`fixed bottom-6 sm:bottom-8 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center gap-3 w-full max-w-[94vw] sm:max-w-md pointer-events-auto select-none ${className}`}
+      className={`fixed bottom-5 sm:bottom-7 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center gap-2 w-full max-w-[92vw] sm:max-w-xs pointer-events-auto select-none ${className}`}
     >
-      {/* 1. Live Spoken Caption Subtitle Balloon */}
+      {/* 1. Live Spoken Caption Compact Coding Terminal Window */}
       <AnimatePresence>
         {subtitle && (
           <motion.div
-            initial={{ opacity: 0, y: 12, scale: 0.95 }}
+            initial={{ opacity: 0, y: 6, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 8, scale: 0.95 }}
-            transition={{ duration: 0.35, ease: 'easeOut' }}
-            className={`w-full px-4 py-3 rounded-2xl bg-[#070D1F]/95 border backdrop-blur-xl flex items-start gap-3 text-left shadow-2xl transition-colors duration-300 ${
+            exit={{ opacity: 0, y: 6, scale: 0.95 }}
+            transition={{ duration: 0.22, ease: 'easeOut' }}
+            className={`w-full max-w-[270px] sm:max-w-[310px] rounded-lg bg-[#070D18]/95 border backdrop-blur-2xl shadow-xl overflow-hidden transition-all duration-300 ${
               voiceState === 'THINKING' || voiceState === 'PREPARING_SPEECH'
-                ? 'border-[#818CF8]/50 shadow-[0_0_35px_rgba(129,140,248,0.25)]'
-                : 'border-[#00F0FF]/40 shadow-[0_0_35px_rgba(0,240,255,0.2)]'
+                ? 'border-[#818CF8]/45 shadow-[0_0_20px_rgba(129,140,248,0.2)]'
+                : 'border-[#00F0FF]/30 shadow-[0_0_20px_rgba(0,240,255,0.16)]'
             }`}
           >
-            <div className="relative mt-0.5 flex-shrink-0">
-              <span
-                className={`w-2.5 h-2.5 rounded-full inline-block ${
-                  voiceState === 'THINKING' || voiceState === 'PREPARING_SPEECH'
-                    ? 'bg-[#A78BFA] animate-ping'
-                    : 'bg-[#00F0FF] animate-ping'
-                }`}
-              />
-              <span
-                className={`absolute inset-0 w-2.5 h-2.5 rounded-full ${
-                  voiceState === 'THINKING' || voiceState === 'PREPARING_SPEECH'
-                    ? 'bg-[#A78BFA]'
-                    : 'bg-[#00F0FF]'
-                }`}
-              />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between mb-1">
+            {/* Terminal Titlebar */}
+            <div className="flex items-center justify-between px-2 py-1 bg-[#0A1226]/90 border-b border-white/10 select-none">
+              {/* Traffic Light Window Controls */}
+              <div className="flex items-center gap-1.2">
+                <button
+                  type="button"
+                  onClick={() => setSubtitle('')}
+                  title="Close terminal (Esc)"
+                  aria-label="Close terminal"
+                  className="w-1.5 h-1.5 rounded-full bg-[#EF4444]/90 hover:bg-[#EF4444] shadow-[0_0_4px_rgba(239,68,68,0.6)] cursor-pointer transition-transform active:scale-75"
+                />
+                <span className="w-1.5 h-1.5 rounded-full bg-[#F59E0B]/90 shadow-[0_0_4px_rgba(245,158,11,0.6)]" />
+                <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]/90 shadow-[0_0_4px_rgba(16,185,129,0.6)]" />
+                <span className="ml-1 text-[8px] font-mono text-slate-400 tracking-wide">
+                  diykan@ai:~
+                </span>
+              </div>
+
+              {/* Terminal Status / Mode Badge */}
+              <div className="flex items-center gap-1">
                 <span
-                  className={`text-[10px] font-mono font-bold tracking-widest uppercase ${
+                  className={`w-1 h-1 rounded-full ${
+                    voiceState === 'THINKING' || voiceState === 'PREPARING_SPEECH'
+                      ? 'bg-[#A78BFA] animate-ping'
+                      : voiceState === 'SPEAKING'
+                      ? 'bg-[#34D399] animate-pulse'
+                      : 'bg-[#00F0FF]'
+                  }`}
+                />
+                <span
+                  className={`text-[7.5px] font-mono font-semibold tracking-wider uppercase ${
                     voiceState === 'THINKING' || voiceState === 'PREPARING_SPEECH'
                       ? 'text-[#C4B5FD]'
+                      : voiceState === 'SPEAKING'
+                      ? 'text-[#34D399]'
                       : 'text-[#38BDF8]'
                   }`}
                 >
-                  {voiceState === 'THINKING' || voiceState === 'PREPARING_SPEECH'
-                    ? 'DAYKAN // NEURAL PROCESSING'
-                    : 'DAYKAN // NEURAL SPEECH'}
+                  {voiceState === 'THINKING'
+                    ? 'THINKING'
+                    : voiceState === 'PREPARING_SPEECH'
+                    ? 'PREPARING'
+                    : voiceState === 'SPEAKING'
+                    ? 'TRANSMITTING'
+                    : 'READY'}
                 </span>
-                {voiceState === 'SPEAKING' ? (
-                  <span className="text-[9px] font-mono text-[#34D399] animate-pulse font-semibold">
-                    TRANSMITTING
-                  </span>
-                ) : voiceState === 'THINKING' ? (
-                  <span className="text-[9px] font-mono text-[#A78BFA] animate-pulse font-semibold">
-                    THINKING
-                  </span>
-                ) : voiceState === 'PREPARING_SPEECH' ? (
-                  <span className="text-[9px] font-mono text-[#A78BFA] animate-pulse font-semibold">
-                    PREPARING
-                  </span>
-                ) : null}
               </div>
-              <p className="text-xs sm:text-sm text-slate-100 font-sans leading-relaxed tracking-wide">
-                {subtitle}
-              </p>
+            </div>
+
+            {/* Terminal Console Output Body */}
+            <div className="p-2 max-h-20 sm:max-h-24 overflow-y-auto custom-scrollbar text-left font-mono">
+              <div className="flex items-start gap-1 text-[10px] sm:text-[10.5px] leading-tight">
+                <span className="text-[#00F0FF] select-none font-bold shrink-0 text-[10px]">$</span>
+                <p className="text-slate-200 tracking-tight break-words">
+                  {subtitle}
+                  <span className="inline-block w-1 h-2.5 ml-0.5 bg-[#00F0FF] animate-pulse align-middle" />
+                </p>
+              </div>
             </div>
           </motion.div>
         )}
@@ -162,7 +185,7 @@ export function DaykanVoiceWidget({ className = '' }: DaykanVoiceWidgetProps) {
                 ? 'Stop Listening'
                 : voiceState === 'THINKING' || voiceState === 'PREPARING_SPEECH' || voiceState === 'SPEAKING'
                 ? 'Cancel Speech'
-                : 'Speak to Daykan'
+                : 'Speak to Diykan'
             }
             className={`relative w-12 h-12 sm:w-13 sm:h-13 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg cursor-pointer ${
               voiceState === 'LISTENING'
@@ -210,11 +233,11 @@ export function DaykanVoiceWidget({ className = '' }: DaykanVoiceWidgetProps) {
               {voiceState === 'LISTENING'
                 ? 'LISTENING... (SPEAK FREELY)'
                 : voiceState === 'THINKING'
-                ? 'DAYKAN THINKING...'
+                ? 'DIYKAN THINKING...'
                 : voiceState === 'PREPARING_SPEECH'
                 ? 'PREPARING RESPONSE...'
                 : voiceState === 'SPEAKING'
-                ? 'DAYKAN SPEAKING...'
+                ? 'DIYKAN SPEAKING...'
                 : voiceState === 'ERROR'
                 ? 'MIC RECONNECT REQUIRED'
                 : 'AI VOICE CONVERSATION'}
@@ -252,7 +275,7 @@ export function DaykanVoiceWidget({ className = '' }: DaykanVoiceWidgetProps) {
           <button
             type="button"
             onClick={handleManualHelloClick}
-            title="Click to hear Daykan introduction"
+            title="Click to hear Diykan introduction"
             className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#00F0FF]/10 hover:bg-[#00F0FF]/25 border border-[#00F0FF]/30 text-[10px] font-mono font-semibold text-[#38BDF8] hover:text-[#00F0FF] transition-all cursor-pointer shadow-[0_0_12px_rgba(0,240,255,0.15)]"
           >
             <Sparkles className="w-3 h-3" />
