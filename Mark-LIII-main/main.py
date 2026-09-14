@@ -121,6 +121,9 @@ def _pcm_level(samples) -> float:
 
 
 def _get_api_key() -> str:
+    env_key = _sys.modules["os"].environ.get("GEMINI_API_KEY") or _sys.modules["os"].environ.get("GOOGLE_API_KEY")
+    if env_key and env_key.strip():
+        return env_key.strip()
     with open(API_CONFIG_PATH, "r", encoding="utf-8") as f:
         return json.load(f)["gemini_api_key"]
 

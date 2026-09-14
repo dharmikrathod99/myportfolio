@@ -141,6 +141,45 @@ export class DaykanConversationalAIService implements IDaykanAIService {
       console.warn('[Daykan] JARVIS bridge service offline or timed out, trying fallback:', jarvisErr?.message || jarvisErr);
     }
 
+    // 2. Direct Gemini API call if GEMINI_API_KEY is provided in environment variables
+    const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+    if (geminiKey && geminiKey.trim()) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+        const geminiRes = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey.trim()}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              system_instruction: { parts: [{ text: DAYKAN_SYSTEM_PROMPT }] },
+              contents: [
+                ...sanitizedHistory.map((h) => ({
+                  role: h.role === 'assistant' ? 'model' : 'user',
+                  parts: [{ text: h.content }],
+                })),
+                { role: 'user', parts: [{ text: trimmedInput }] },
+              ],
+            }),
+            signal: controller.signal,
+          }
+        );
+        clearTimeout(timeoutId);
+
+        if (geminiRes.ok) {
+          const gData = (await geminiRes.json()) as any;
+          const gText = gData.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+          if (gText) {
+            console.log(`[GEMINI ENV CLOUD RESPONSE]\n"${gText}"`);
+            return { reply: gText };
+          }
+        }
+      } catch (gErr: any) {
+        console.warn('[Daykan] Direct Gemini API error:', gErr?.message || gErr);
+      }
+    }
+
     // 2. Secondary: Try external or local LLM server if configured
     const isLocalEndpoint =
       this.endpoint.includes('localhost') ||

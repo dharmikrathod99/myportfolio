@@ -41,16 +41,30 @@ from memory.memory_manager import (
 )
 
 # ── Load Configuration ────────────────────────────────────────────────────────
+try:
+    from dotenv import load_dotenv
+    load_dotenv(BASE_DIR / ".env")
+    load_dotenv(BASE_DIR.parent / "server" / ".env")
+except ImportError:
+    pass
+
 CONFIG_PATH = BASE_DIR / "config" / "api_keys.json"
 
 def get_api_key() -> str:
+    # 1. Environment variable (GEMINI_API_KEY or GOOGLE_API_KEY)
+    env_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+    if env_key and env_key.strip():
+        return env_key.strip()
+
+    # 2. Local config/api_keys.json fallback
     try:
-        with open(CONFIG_PATH, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            return data.get("gemini_api_key", "").strip()
+        if CONFIG_PATH.exists():
+            with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                return data.get("gemini_api_key", "").strip()
     except Exception as e:
         print(f"[JARVIS Service] Warning: Failed to load config: {e}")
-        return ""
+    return ""
 
 # ── Discovered Actions & Plugins ──────────────────────────────────────────────
 _inline_names = {"screen_process", "close_camera", "system_status", "save_memory", "recall_memory"}
