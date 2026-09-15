@@ -1,4 +1,14 @@
 import dotenv from 'dotenv';
+import {
+  matchQuickSystemIntent,
+  createFolder,
+  createFile,
+  openApp,
+  openUrl,
+  getSystemStatus,
+  executeCommand,
+  SystemActionResult,
+} from './systemActions';
 
 dotenv.config();
 
@@ -12,52 +22,139 @@ export interface DaykanAIResponse {
   tokensUsed?: number;
 }
 
-export const DAYKAN_SYSTEM_PROMPT = `You are Diykan, the personal AI assistant created by Dharmik Rathod, known as D.R Developer.
+export const SYSTEM_TOOLS = [
+  {
+    function_declarations: [
+      {
+        name: 'create_folder',
+        description: 'Creates a new folder or directory on the user computer Desktop or specified location. Call this whenever the user asks to create, make, or build a folder on their desktop or computer.',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            folder_name: {
+              type: 'STRING',
+              description: 'The name for the new folder. If unspecified by user, use "New Folder".',
+            },
+            location: {
+              type: 'STRING',
+              description: 'Target location, defaults to "desktop". Can be "desktop", "downloads", "documents", or an absolute path.',
+            },
+          },
+        },
+      },
+      {
+        name: 'create_file',
+        description: 'Creates a new text file on the user computer Desktop with optional content.',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            file_name: {
+              type: 'STRING',
+              description: 'The file name to create (e.g. notes.txt, test.py).',
+            },
+            content: {
+              type: 'STRING',
+              description: 'Text content to write into the file.',
+            },
+            location: {
+              type: 'STRING',
+              description: 'Target location, defaults to "desktop".',
+            },
+          },
+          required: ['file_name'],
+        },
+      },
+      {
+        name: 'open_app',
+        description: 'Opens or launches a desktop program or app (such as notepad, calculator, chrome, vs code, terminal, explorer, settings, paint).',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            app_name: {
+              type: 'STRING',
+              description: 'The name of the app to launch (e.g. notepad, calculator, chrome, code, explorer).',
+            },
+          },
+          required: ['app_name'],
+        },
+      },
+      {
+        name: 'open_url',
+        description: 'Opens a web URL or website in the default browser.',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            url: {
+              type: 'STRING',
+              description: 'The website URL to open (e.g. https://google.com, https://github.com).',
+            },
+          },
+          required: ['url'],
+        },
+      },
+      {
+        name: 'get_system_status',
+        description: 'Checks local computer hardware telemetry: CPU percentage, RAM used/total, uptime, and processor model.',
+        parameters: {
+          type: 'OBJECT',
+          properties: {},
+        },
+      },
+      {
+        name: 'execute_command',
+        description: 'Executes a safe shell/PowerShell command on the local Windows computer.',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            command: {
+              type: 'STRING',
+              description: 'The command line string to run.',
+            },
+          },
+          required: ['command'],
+        },
+      },
+    ],
+  },
+];
 
-Your primary job is to understand the user's current message and provide the most relevant, accurate, useful, and natural response.
+async function dispatchSystemTool(name: string, args: Record<string, any>): Promise<SystemActionResult> {
+  console.log(`[Daykan Action Dispatcher] Calling tool "${name}" with args:`, args);
+  switch (name) {
+    case 'create_folder':
+      return createFolder(args.folder_name, args.location);
+    case 'create_file':
+      return createFile(args.file_name, args.content, args.location);
+    case 'open_app':
+      return await openApp(args.app_name || '');
+    case 'open_url':
+      return await openUrl(args.url || '');
+    case 'get_system_status':
+      return getSystemStatus();
+    case 'execute_command':
+      return await executeCommand(args.command || '');
+    default:
+      return {
+        success: false,
+        action: name,
+        message: `Unknown action: ${name}`,
+      };
+  }
+}
 
-IMPORTANT BEHAVIOR RULES:
+export const DAYKAN_SYSTEM_PROMPT = `You are Diykan, the intelligent personal AI assistant created by Dharmik Rathod, known as D.R Developer.
 
-1. ALWAYS answer the user's actual question or request.
+Your primary job is to understand the user's current message, execute real computer system commands whenever requested, and provide the most relevant, accurate, useful, and natural response.
 
-2. NEVER repeat your introduction unless the user specifically asks who you are.
-
-3. Do not begin every response with:
-   'I am Diykan...'
-   'I am Dharmik Rathod's personal AI assistant...'
-   or similar wording.
-
-4. Only mention your identity when it is relevant to the conversation.
-
-5. Treat every user message as a real conversational request.
-
-6. If the user asks a technical question, answer technically.
-
-7. If the user asks a general knowledge question, explain it clearly.
-
-8. If the user asks about coding, provide practical coding guidance.
-
-9. If the user asks about Dharmik Rathod or D.R Developer, answer using the portfolio/project information available in the assistant's context.
-
-10. If the user asks a casual question, respond naturally and conversationally.
-
-11. If the user asks for an opinion, provide a useful balanced answer rather than repeating your identity.
-
-12. If the user asks a follow-up question, understand the previous conversation and answer the follow-up based on context.
-
-13. Do not hallucinate personal information about Dharmik Rathod. If the information is unavailable, say so honestly.
-
-14. Never fabricate real-time information. If the system has access to an appropriate real-time tool, use it. Otherwise clearly state that you cannot verify current information.
-
-15. Keep answers appropriate for a voice assistant: natural, concise, conversational, and easy to listen to.
-
-16. Do not use unnecessary markdown, long headings, tables, or excessive formatting in spoken responses.
-
-17. Never repeat the same answer simply because the user asks a similar question. Generate the best response based on the actual current message.
-
-18. The user's message has the highest priority for determining what the response should be, while your assistant personality should remain consistent.
-
-You are an intelligent conversational assistant, not a prerecorded portfolio introduction.`;
+CRITICAL VOICE & ACTION RULES:
+1. FULL SYSTEM AUTOMATION: When the user asks to create a folder, create a file, open an application, open a website, check system status, or run a command, you MUST use the corresponding function call tool.
+2. ALWAYS answer the user's actual question or request directly.
+3. LANGUAGE MATCHING: If the user asks in Hindi or Hinglish, reply in conversational Romanized Hinglish (using the Latin/English alphabet ONLY, do NOT use Devanagari script so it can be synthesized by speech audio). If the user asks in English, reply in English. If in Gujarati or any other language, use Romanized alphabet.
+4. CONCISE & SPOKEN-READY: Keep your answer to 1-3 sentences max so it sounds natural when spoken aloud.
+5. NO FORMATTING: Do NOT use markdown asterisks (**bold**), hashtags (# headings), backticks, bullet lists, or tables.
+6. NEVER begin every response with "I am Diykan..." or repeat your introduction unless the user specifically asks who you are.
+7. If the user asks about Dharmik Rathod or D.R Developer, highlight his expertise as a Full-Stack Engineer specializing in MERN, Next.js, Three.js 3D WebGL, and scalable AI systems.
+8. If the user asks technical, general, coding, or casual questions, answer accurately and directly.`;
 
 export interface IDaykanAIService {
   generateResponse(
@@ -68,7 +165,7 @@ export interface IDaykanAIService {
 
 /**
  * High-performance conversational intelligence service for Daykan
- * Communicates with OpenAI, Groq, Ollama, local LLM endpoints,
+ * Communicates with Google Gemini, OpenAI, Groq, local LLM endpoints,
  * or runs the built-in conversational reasoning engine.
  */
 export class DaykanConversationalAIService implements IDaykanAIService {
@@ -113,10 +210,107 @@ export class DaykanConversationalAIService implements IDaykanAIService {
       .filter((h) => h && h.content && h.content.trim())
       .slice(-8);
 
-    // 1. Primary: Query Mark-LIII JARVIS AI & Workflow Service
+    // 0. Fast-Path Direct System Intent Matcher (Instant Local Execution)
+    const quickResult = await matchQuickSystemIntent(trimmedInput);
+    if (quickResult && quickResult.success) {
+      const isHindi = /(banao|kholo|chalu|par|pe|karo|mera|meri|mujhe)/i.test(trimmedInput);
+      let reply = quickResult.message;
+      if (isHindi) {
+        if (quickResult.action === 'create_folder') {
+          reply = `Maine aapke desktop par "${quickResult.data?.name || 'folder'}" bana diya hai.`;
+        } else if (quickResult.action === 'create_file') {
+          reply = `Maine aapke desktop par "${quickResult.data?.name || 'file'}" create kar di hai.`;
+        } else if (quickResult.action === 'open_app') {
+          reply = `${quickResult.message}`;
+        }
+      }
+      console.log(`[FAST-PATH ACTION EXECUTED]\n"${reply}"`);
+      return { reply };
+    }
+
+    // 1. Primary: Direct Google Gemini API with multi-model fallback chain & function calling
+    const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+    if (geminiKey && geminiKey.trim().startsWith('AIzaSy')) {
+      const candidateModels = [
+        'gemini-2.0-flash',
+        'gemini-1.5-flash',
+      ];
+
+      for (const model of candidateModels) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 2500);
+          const geminiRes = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey.trim()}`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                system_instruction: { parts: [{ text: DAYKAN_SYSTEM_PROMPT }] },
+                contents: [
+                  ...sanitizedHistory.map((h) => ({
+                    role: h.role === 'assistant' ? 'model' : 'user',
+                    parts: [{ text: h.content }],
+                  })),
+                  { role: 'user', parts: [{ text: trimmedInput }] },
+                ],
+                tools: SYSTEM_TOOLS,
+              }),
+              signal: controller.signal,
+            }
+          );
+          clearTimeout(timeoutId);
+
+          if (geminiRes.ok) {
+            const gData = (await geminiRes.json()) as any;
+            const functionCall = gData.candidates?.[0]?.content?.parts?.find((p: any) => p.functionCall)?.functionCall;
+
+            if (functionCall) {
+              const toolResult = await dispatchSystemTool(functionCall.name, functionCall.args || {});
+              const isHindi = /(banao|kholo|chalu|par|pe|karo|mera|meri|mujhe)/i.test(trimmedInput);
+              let reply = toolResult.message;
+              if (isHindi) {
+                if (toolResult.action === 'create_folder') {
+                  reply = `Maine aapke desktop par "${toolResult.data?.name || 'folder'}" bana diya hai.`;
+                } else if (toolResult.action === 'create_file') {
+                  reply = `Maine aapke desktop par "${toolResult.data?.name || 'file'}" create kar di hai.`;
+                } else if (toolResult.action === 'open_app') {
+                  reply = `${toolResult.message}`;
+                }
+              }
+              console.log(`[ACTION EXECUTED VIA GEMINI TOOL]\n"${reply}"`);
+              return { reply };
+            }
+
+            let gText = gData.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+            if (gText) {
+              // Strip markdown symbols for clean speech synthesis
+              gText = gText
+                .replace(/^#+\s+/gm, '')
+                .replace(/\*\*(.*?)\*\*/g, '$1')
+                .replace(/\*(.*?)\*/g, '$1')
+                .replace(/`([^`]+)`/g, '$1')
+                .replace(/^[-*]\s+/gm, '')
+                .replace(/\n+/g, ' ')
+                .trim();
+              console.log(`[GEMINI CLOUD RESPONSE (${model})]\n"${gText}"`);
+              return { reply: gText };
+            }
+          } else {
+            const errStatus = geminiRes.status;
+            const errText = await geminiRes.text().catch(() => '');
+            console.warn(`[Gemini API ${model}] HTTP ${errStatus}: ${errText.substring(0, 100)}`);
+          }
+        } catch (gErr: any) {
+          console.warn(`[Daykan] Gemini API error on ${model}:`, gErr?.message || gErr);
+        }
+      }
+    }
+
+    // 2. Secondary: Query Mark-LIII JARVIS AI & Workflow Service if running locally (fast 1.5s timeout)
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 35000);
+      const timeoutId = setTimeout(() => controller.abort(), 1500);
 
       const jarvisRes = await fetch(`${this.jarvisUrl}/api/chat`, {
         method: 'POST',
@@ -137,47 +331,8 @@ export class DaykanConversationalAIService implements IDaykanAIService {
           return { reply: data.reply.trim() };
         }
       }
-    } catch (jarvisErr: any) {
-      console.warn('[Daykan] JARVIS bridge service offline or timed out, trying fallback:', jarvisErr?.message || jarvisErr);
-    }
-
-    // 2. Direct Gemini API call if GEMINI_API_KEY is provided in environment variables
-    const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-    if (geminiKey && geminiKey.trim()) {
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000);
-        const geminiRes = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey.trim()}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              system_instruction: { parts: [{ text: DAYKAN_SYSTEM_PROMPT }] },
-              contents: [
-                ...sanitizedHistory.map((h) => ({
-                  role: h.role === 'assistant' ? 'model' : 'user',
-                  parts: [{ text: h.content }],
-                })),
-                { role: 'user', parts: [{ text: trimmedInput }] },
-              ],
-            }),
-            signal: controller.signal,
-          }
-        );
-        clearTimeout(timeoutId);
-
-        if (geminiRes.ok) {
-          const gData = (await geminiRes.json()) as any;
-          const gText = gData.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-          if (gText) {
-            console.log(`[GEMINI ENV CLOUD RESPONSE]\n"${gText}"`);
-            return { reply: gText };
-          }
-        }
-      } catch (gErr: any) {
-        console.warn('[Daykan] Direct Gemini API error:', gErr?.message || gErr);
-      }
+    } catch {
+      // Jarvis not running locally; proceed to LLM endpoint / reasoning fallback
     }
 
     // 2. Secondary: Try external or local LLM server if configured

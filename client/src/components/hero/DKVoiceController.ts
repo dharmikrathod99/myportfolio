@@ -170,19 +170,14 @@ export class DKVoiceController {
     this.isListening = true;
 
     try {
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        this.mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        if (this.audioCtx && this.analyser) {
-          const source = this.audioCtx.createMediaStreamSource(this.mediaStream);
-          source.connect(this.analyser);
-        }
-      }
+
 
       // Check for SpeechRecognition
       const SpeechRec = (window as unknown as { SpeechRecognition?: any; webkitSpeechRecognition?: any }).SpeechRecognition || (window as unknown as { webkitSpeechRecognition?: any }).webkitSpeechRecognition;
       if (SpeechRec) {
         const recognition = new SpeechRec();
-        recognition.lang = 'en-US';
+        const navLang = typeof navigator !== 'undefined' && navigator.language ? navigator.language : 'en-US';
+        recognition.lang = navLang.toLowerCase().startsWith('hi') ? 'hi-IN' : (navLang.toLowerCase().startsWith('en') ? 'en-IN' : navLang);
         recognition.interimResults = false;
         recognition.maxAlternatives = 1;
 

@@ -525,7 +525,11 @@
           sp.onaudioprocess = e => {
             if (ws.readyState === 1) ws.send(_f32toPcm16(e.inputBuffer.getChannelData(0), rate));
           };
-          src.connect(sp); sp.connect(ctx.destination);
+          const mute = ctx.createGain();
+          mute.gain.value = 0;
+          src.connect(sp);
+          sp.connect(mute);
+          mute.connect(ctx.destination);
           _audioNd = sp;
         }
 

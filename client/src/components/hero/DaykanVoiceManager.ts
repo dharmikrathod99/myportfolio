@@ -191,14 +191,13 @@ export class DaykanVoiceManager {
   private static instance: DaykanVoiceManager | null = null;
 
   private audioCtx: AudioContext | null = null;
-  private analyser: AnalyserNode | null = null;
-  private timeDomainData: Uint8Array | null = null;
-  private freqData: Uint8Array | null = null;
-  private dataArray: Uint8Array | null = null;
+  // Output path (Kokoro TTS playback -> lip-sync analyser -> destination)
+  private speakerAnalyser: AnalyserNode | null = null;
+  private speakerTimeDomainData: Uint8Array | null = null;
+  private speakerFreqData: Uint8Array | null = null;
   private audioElement: HTMLAudioElement | null = null;
   private audioSourceNode: MediaElementAudioSourceNode | null = null;
-  private micSourceNode: MediaStreamAudioSourceNode | null = null;
-  private mediaStream: MediaStream | null = null;
+
   private recognition: any = null;
   private isSyntheticSpeaking: boolean = false;
   private currentObjectUrl: string | null = null;
@@ -321,12 +320,13 @@ export class DaykanVoiceManager {
         (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       if (AudioContextClass) {
         this.audioCtx = new AudioContextClass();
-        this.analyser = this.audioCtx.createAnalyser();
-        this.analyser.fftSize = 512;
-        this.analyser.smoothingTimeConstant = 0.75;
-        this.timeDomainData = new Uint8Array(this.analyser.fftSize);
-        this.freqData = new Uint8Array(this.analyser.frequencyBinCount);
-        this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
+
+        // Output audio analyser for Daykan Kokoro voice playback & 60FPS lip-sync
+        this.speakerAnalyser = this.audioCtx.createAnalyser();
+        this.speakerAnalyser.fftSize = 512;
+        this.speakerAnalyser.smoothingTimeConstant = 0.75;
+        this.speakerTimeDomainData = new Uint8Array(this.speakerAnalyser.fftSize);
+        this.speakerFreqData = new Uint8Array(this.speakerAnalyser.frequencyBinCount);
       }
     }
 
@@ -351,13 +351,14 @@ export class DaykanVoiceManager {
       });
     }
 
-    if (this.audioCtx && this.analyser && this.audioElement && !this.audioSourceNode) {
+    // Connect AI TTS playback element to speaker analyser and destination
+    if (this.audioCtx && this.speakerAnalyser && this.audioElement && !this.audioSourceNode) {
       try {
         this.audioSourceNode = this.audioCtx.createMediaElementSource(this.audioElement);
-        this.audioSourceNode.connect(this.analyser);
-        this.analyser.connect(this.audioCtx.destination);
+        this.audioSourceNode.connect(this.speakerAnalyser);
+        this.speakerAnalyser.connect(this.audioCtx.destination);
       } catch (err) {
-        console.warn('Could not connect MediaElementSource to analyser:', err);
+        console.warn('Could not connect MediaElementSource to speaker analyser:', err);
       }
     }
   }
@@ -379,28 +380,6 @@ export class DaykanVoiceManager {
     }
 
     try {
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        try {
-          this.mediaStream = await navigator.mediaDevices.getUserMedia({
-            audio: {
-              echoCancellation: true,
-              noiseSuppression: true,
-              autoGainControl: true,
-            },
-          });
-          if (this.audioCtx && this.analyser) {
-            this.micSourceNode = this.audioCtx.createMediaStreamSource(this.mediaStream);
-            this.micSourceNode.connect(this.analyser);
-          }
-        } catch (micErr: any) {
-          console.warn('Microphone permission denied:', micErr);
-          this.errorMessage = 'Microphone access denied. Please allow microphone permissions.';
-          this.setState('ERROR');
-          this.cleanupMicStream();
-          return false;
-        }
-      }
-
       this.startAudioAnalysisLoop();
 
       const SpeechRecClass =
@@ -416,7 +395,8 @@ export class DaykanVoiceManager {
       }
 
       this.recognition = new SpeechRecClass();
-      this.recognition.lang = 'en-US';
+      const navLang = typeof navigator !== 'undefined' && navigator.language ? navigator.language : 'en-US';
+      this.recognition.lang = navLang.toLowerCase().startsWith('hi') ? 'hi-IN' : (navLang.toLowerCase().startsWith('en') ? 'en-IN' : navLang);
       this.recognition.interimResults = false;
       this.recognition.maxAlternatives = 1;
       this.recognition.continuous = false;
@@ -486,26 +466,10 @@ export class DaykanVoiceManager {
       }
       this.recognition = null;
     }
-    this.cleanupMicStream();
     if (this.state === 'LISTENING') {
       this.setState('IDLE');
     }
     this.setAmplitude(0);
-  }
-
-  private cleanupMicStream() {
-    if (this.micSourceNode) {
-      try {
-        this.micSourceNode.disconnect();
-      } catch {
-        // ignore
-      }
-      this.micSourceNode = null;
-    }
-    if (this.mediaStream) {
-      this.mediaStream.getTracks().forEach((t) => t.stop());
-      this.mediaStream = null;
-    }
   }
 
   /**
@@ -861,25 +825,25 @@ export class DaykanVoiceManager {
       let lowEnergy = 0;
       let midEnergy = 0;
 
-      if (this.analyser && this.timeDomainData && this.freqData) {
-        (this.analyser as any).getByteTimeDomainData(this.timeDomainData);
-        (this.analyser as any).getByteFrequencyData(this.freqData);
+      if (this.speakerAnalyser && this.speakerTimeDomainData && this.speakerFreqData) {
+        (this.speakerAnalyser as any).getByteTimeDomainData(this.speakerTimeDomainData);
+        (this.speakerAnalyser as any).getByteFrequencyData(this.speakerFreqData);
 
         let sumSq = 0;
-        for (let i = 0; i < this.timeDomainData.length; i++) {
-          const norm = (this.timeDomainData[i] - 128) / 128;
+        for (let i = 0; i < this.speakerTimeDomainData.length; i++) {
+          const norm = (this.speakerTimeDomainData[i] - 128) / 128;
           sumSq += norm * norm;
         }
-        liveRms = Math.sqrt(sumSq / this.timeDomainData.length);
+        liveRms = Math.sqrt(sumSq / this.speakerTimeDomainData.length);
 
         // Low formant vocal fundamental (80 - 500Hz)
         let lowSum = 0;
-        for (let i = 1; i <= 5; i++) lowSum += this.freqData[i];
+        for (let i = 1; i <= 5; i++) lowSum += this.speakerFreqData[i];
         lowEnergy = lowSum / (5 * 255);
 
         // Mid vowel formants F1/F2 (500 - 2200Hz)
         let midSum = 0;
-        for (let i = 6; i <= 24; i++) midSum += this.freqData[i];
+        for (let i = 6; i <= 24; i++) midSum += this.speakerFreqData[i];
         midEnergy = midSum / (19 * 255);
       } else {
         liveRms = 0.08 + Math.sin(elapsed * 10.0) * 0.04;
@@ -974,19 +938,10 @@ export class DaykanVoiceManager {
     const checkMic = () => {
       if (this.state !== 'LISTENING') return;
 
-      if (this.analyser && this.dataArray) {
-        (this.analyser as any).getByteFrequencyData(this.dataArray);
-        let sum = 0;
-        for (let i = 0; i < this.dataArray.length; i++) {
-          sum += this.dataArray[i];
-        }
-        const avg = sum / this.dataArray.length;
-        const amp = Math.min(1.0, avg / 85.0);
-        this.setAmplitude(amp);
-      } else {
-        const pulse = 0.3 + 0.25 * Math.sin(performance.now() * 0.005);
-        this.setAmplitude(pulse);
-      }
+      const time = performance.now() * 0.007;
+      const wave = Math.sin(time) * 0.28 + Math.sin(time * 2.3) * 0.15 + 0.45;
+      const amp = Math.min(1.0, Math.max(0.12, wave + (Math.random() - 0.5) * 0.1));
+      this.setAmplitude(amp);
 
       this.animFrameId = requestAnimationFrame(checkMic);
     };
@@ -1049,13 +1004,13 @@ export class DaykanVoiceManager {
       }
       this.audioSourceNode = null;
     }
-    if (this.micSourceNode) {
+    if (this.speakerAnalyser) {
       try {
-        this.micSourceNode.disconnect();
+        this.speakerAnalyser.disconnect();
       } catch {
         // ignore
       }
-      this.micSourceNode = null;
+      this.speakerAnalyser = null;
     }
     if (this.audioElement) {
       this.audioElement.pause();

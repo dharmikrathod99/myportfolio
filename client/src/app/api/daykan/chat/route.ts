@@ -29,7 +29,63 @@ export async function POST(req: NextRequest) {
       console.warn('[Next.js Daykan Chat Proxy]: Express backend unreachable, generating edge response:', serverErr);
     }
 
-    // 2. Direct intelligent edge responder if Express backend is offline
+    // 2. Direct Gemini Generative Language API fallback if Express is unreachable
+    const geminiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+    if (geminiKey && geminiKey.trim().startsWith('AIzaSy')) {
+      const candidateModels = [
+        'gemini-2.0-flash',
+        'gemini-1.5-flash',
+      ];
+      for (const model of candidateModels) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 2500);
+          const gRes = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey.trim()}`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                system_instruction: {
+                  parts: [{
+                    text: "You are Diykan, an AI assistant created by Dharmik Rathod (D.R Developer). Answer the user's actual question directly. If the user asks in Hindi/Hinglish, reply in Romanized Hinglish (Latin alphabet only, no Devanagari). If in English, reply in English. Keep answers concise, natural, conversational, and direct for voice synthesis (1-2 sentences max). Do not use markdown asterisks or bullet points."
+                  }]
+                },
+                contents: [
+                  ...(body.history || []).map((h: any) => ({
+                    role: h.role === 'assistant' ? 'model' : 'user',
+                    parts: [{ text: h.content }],
+                  })),
+                  { role: 'user', parts: [{ text: userMessage }] },
+                ],
+              }),
+              signal: controller.signal,
+            }
+          );
+          clearTimeout(timeoutId);
+
+          if (gRes.ok) {
+            const gData = (await gRes.json()) as any;
+            let gText = gData.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+            if (gText) {
+              gText = gText
+                .replace(/^#+\s+/gm, '')
+                .replace(/\*\*(.*?)\*\*/g, '$1')
+                .replace(/\*(.*?)\*/g, '$1')
+                .replace(/`([^`]+)`/g, '$1')
+                .replace(/^[-*]\s+/gm, '')
+                .replace(/\n+/g, ' ')
+                .trim();
+              return NextResponse.json({ success: true, reply: gText });
+            }
+          }
+        } catch {
+          // try next model
+        }
+      }
+    }
+
+    // 3. Direct intelligent edge responder if Express backend and Gemini are offline
     const q = userMessage.toLowerCase();
     const cleanQ = q.replace(/[?!.,;]/g, '');
     const history = (body.history || []) as { role: string; content: string }[];

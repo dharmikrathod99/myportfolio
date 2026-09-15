@@ -3,14 +3,20 @@ import sys
 import json
 import io
 import argparse
-from http.server import HTTPServer, BaseHTTPRequestHandler
-from socketserver import ThreadingMixIn
+from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 import numpy as np
 import soundfile as sf
 import torch
 
-# Suppress HF symlink warnings on Windows
+# Ensure UTF-8 and unbuffered output on Windows (prevents IPA phoneme encoding crashes)
+os.environ["PYTHONIOENCODING"] = "utf-8"
+os.environ["PYTHONUTF8"] = "1"
 os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
+
+if sys.stdout and hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace", line_buffering=True)
+if sys.stderr and hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace", line_buffering=True)
 
 from kokoro import KPipeline
 
@@ -23,13 +29,23 @@ DEFAULT_LANG = os.environ.get("KOKORO_LANG", "a") # 'a' = American English
 pipeline = None
 default_voice_pack = None
 
-class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
+class KokoroHTTPServer(ThreadingHTTPServer):
     daemon_threads = True
+    allow_reuse_address = True
+
+    def handle_error(self, request, client_address):
+        exc_type, exc_val, _ = sys.exc_info()
+        if exc_type in (ConnectionResetError, ConnectionAbortedError, BrokenPipeError):
+            return
+        try:
+            print(f"[Kokoro Server] Request error from {client_address}: {exc_val}", flush=True)
+        except Exception:
+            pass
 
 class KokoroRequestHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         # Clean server logging
-        print(f"[Kokoro Server] {self.address_string()} - {format % args}")
+        print(f"[Kokoro Server] {self.address_string()} - {format % args}", flush=True)
 
     def do_OPTIONS(self):
         self.send_response(200)
@@ -95,11 +111,20 @@ class KokoroRequestHandler(BaseHTTPRequestHandler):
 
         try:
             # Generate audio in memory (model loaded once at server startup)
+            print(f"[Kokoro Server] Synthesizing: \"{text[:45]}...\" (voice: {voice}, speed: {speed})", flush=True)
             generator = pipeline(text, voice=voice, speed=speed, split_pattern=r'\n+')
             audio_chunks = []
             sample_rate = 24000
 
-            for _, _, audio in generator:
+            for item in generator:
+                audio = None
+                if hasattr(item, 'audio') and item.audio is not None:
+                    audio = item.audio
+                elif isinstance(item, (tuple, list)) and len(item) >= 3:
+                    audio = item[2]
+                elif hasattr(item, 'output') and item.output is not None:
+                    audio = getattr(item.output, 'audio', item.output)
+
                 if audio is not None and len(audio) > 0:
                     audio_chunks.append(audio)
 
@@ -126,12 +151,18 @@ class KokoroRequestHandler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(wav_bytes)
 
+        except (ConnectionResetError, ConnectionAbortedError, BrokenPipeError):
+            print("[Kokoro Server] Client disconnected before audio could be delivered", flush=True)
+            return
         except Exception as e:
-            print(f"[Kokoro Server Error] Inference failed: {e}")
-            self.send_response(500)
-            self.send_header('Content-Type', 'application/json')
-            self.end_headers()
-            self.wfile.write(json.dumps({"error": f"TTS synthesis failed: {str(e)}"}).encode('utf-8'))
+            print(f"[Kokoro Server Error] Inference failed: {e}", flush=True)
+            try:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": f"TTS synthesis failed: {str(e)}"}).encode('utf-8'))
+            except Exception:
+                pass
 
 def main():
     global pipeline
@@ -153,26 +184,30 @@ def main():
     except Exception:
         pass
 
-    server_address = (args.host, args.port)
-    httpd = ThreadedHTTPServer(server_address, KokoroRequestHandler)
-    print(f"[Kokoro-82M] HTTP Server bound on http://{args.host}:{args.port}")
-    print(f"  - Health Endpoint:  GET  http://{args.host}:{args.port}/health")
-    print(f"  - Speech Synthesis: POST http://{args.host}:{args.port}/tts")
-
-    # Load model into memory
-    print("[Kokoro-82M] Loading model into memory...")
+    # Load model into memory before accepting connections
+    print("[Kokoro-82M] Loading model into memory...", flush=True)
     pipeline = KPipeline(lang_code=DEFAULT_LANG, repo_id='hexgrad/Kokoro-82M')
-    print("[Kokoro-82M] Pre-warming voice pack...")
+    print("[Kokoro-82M] Pre-warming voice pack...", flush=True)
     pipeline.load_voice(args.voice)
-    print("[Kokoro-82M] Model ready and cached in RAM.")
-    print("=" * 60)
+    print("[Kokoro-82M] Model ready and cached in RAM.", flush=True)
+    print("=" * 60, flush=True)
+
+    server_address = (args.host, args.port)
+    httpd = KokoroHTTPServer(server_address, KokoroRequestHandler)
+    print(f"[Kokoro-82M] HTTP Server bound on http://{args.host}:{args.port}", flush=True)
+    print(f"  - Health Endpoint:  GET  http://{args.host}:{args.port}/health", flush=True)
+    print(f"  - Speech Synthesis: POST http://{args.host}:{args.port}/tts", flush=True)
+    print("=" * 60, flush=True)
 
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
-        print("\n[Kokoro-82M] Shutting down server...")
+        print("\n[Kokoro-82M] Shutting down server...", flush=True)
         httpd.shutdown()
-        print("[Kokoro-82M] Server stopped.")
+        print("[Kokoro-82M] Server stopped.", flush=True)
+    except Exception as e:
+        print(f"\n[Kokoro-82M Fatal] Server error: {e}", flush=True)
+        httpd.shutdown()
 
 if __name__ == '__main__':
     main()

@@ -30,12 +30,7 @@ __pycache__/
 !client/public/audio/*.mp3
 !client/public/audio/*.vtt
 !client/public/audio/*.json
-ai/kokoro/output/
-
-# Temporary test scripts
-hindi_text.txt
-client/check_mesh35.py
-client/inspect_m35_acc.py
+backend/ai/kokoro/output/
 
 # Environment Variables & Secrets
 .env

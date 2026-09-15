@@ -5,6 +5,7 @@ import { apiRateLimiter } from './middleware/rateLimiter';
 import contactRouter from './routes/contact';
 import statsRouter from './routes/stats';
 import daykanRouter from './routes/daykan';
+import { ensureKokoroServerRunning } from './services/kokoroManager';
 
 dotenv.config();
 
@@ -31,8 +32,10 @@ app.use('/api/daykan', daykanRouter);
 app.use('/api/diykan', daykanRouter);
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`🚀 Dharmik Tarasaka Backend API running on port ${PORT}`);
+  // Automatically start Kokoro-82M TTS engine if not already running
+  await ensureKokoroServerRunning();
 });
 
 export default app;
