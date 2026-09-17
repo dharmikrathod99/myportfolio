@@ -42,10 +42,11 @@ export default function HeroSection() {
     <section
       id="hero"
       className="relative w-full h-[100dvh] min-h-[100dvh] flex items-center justify-center overflow-hidden bg-[#070A14] select-none touch-pan-y"
+      style={{ touchAction: 'pan-y' }}
     >
       <Hero3DErrorBoundary>
         {/* Pure 3D Mia Model - Full-screen centerpiece */}
-        <div className="w-full h-full min-h-[100dvh] z-0 overflow-hidden touch-pan-y">
+        <div className="w-full h-full min-h-[100dvh] z-0 overflow-hidden touch-pan-y" style={{ touchAction: 'pan-y' }}>
           <MiaModel className="w-full h-full min-h-[100dvh]" showStatusLabel={false} />
         </div>
       </Hero3DErrorBoundary>

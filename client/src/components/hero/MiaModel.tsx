@@ -58,7 +58,7 @@ export function getResponsiveCameraConfig(width: number, height: number) {
 }
 
 function ResponsiveCameraRig({ orbitRef }: { orbitRef: React.RefObject<any> }) {
-  const { camera, size } = useThree();
+  const { camera, size, gl } = useThree();
 
   useLayoutEffect(() => {
     if (!size.width || !size.height) return;
@@ -76,6 +76,24 @@ function ResponsiveCameraRig({ orbitRef }: { orbitRef: React.RefObject<any> }) {
       orbitRef.current.update();
     }
   }, [camera, size.width, size.height, orbitRef]);
+
+  // Guarantee mobile browser can ALWAYS perform native vertical page scrolling over the 3D canvas
+  useEffect(() => {
+    const canvas = gl?.domElement;
+    if (!canvas) return;
+
+    canvas.style.touchAction = 'pan-y';
+    canvas.style.setProperty('touch-action', 'pan-y', 'important');
+
+    const observer = new MutationObserver(() => {
+      if (canvas.style.touchAction !== 'pan-y') {
+        canvas.style.setProperty('touch-action', 'pan-y', 'important');
+      }
+    });
+
+    observer.observe(canvas, { attributes: true, attributeFilter: ['style'] });
+    return () => observer.disconnect();
+  }, [gl]);
 
   return null;
 }
@@ -431,6 +449,7 @@ const Model = React.memo(function Model({
   const tempNdcRef = useRef(new THREE.Vector2());
 
   const pointerTargetRef = useRef({ x: 0, y: 0, isHovered: false });
+  const scrollGazeOffsetRef = useRef(0);
   const prevPointerRef = useRef({ x: 0, y: 0 });
   const pointerVelocityRef = useRef(0);
   const tempHeadGazeDirRef = useRef(new THREE.Vector3());
@@ -443,7 +462,7 @@ const Model = React.memo(function Model({
     blinkProgress: 0,
   });
 
-  // Unified pointer & touch tracking: works across mouse, touchscreens, tablets, and styluses
+  // Unified pointer, touch & scroll tracking: works across mobile, touchscreens, mouse & trackpads
   useEffect(() => {
     const updateCoords = (clientX: number, clientY: number) => {
       const x = (clientX / window.innerWidth) * 2 - 1;
@@ -452,15 +471,23 @@ const Model = React.memo(function Model({
     };
 
     const handlePointerMove = (e: PointerEvent) => {
+      if (e.pointerType === 'touch') return;
       updateCoords(e.clientX, e.clientY);
     };
 
     const handlePointerDown = (e: PointerEvent) => {
+      if (e.pointerType === 'touch') return;
       updateCoords(e.clientX, e.clientY);
     };
 
     const handlePointerUp = () => {
       pointerTargetRef.current = { x: 0, y: 0, isHovered: false };
+    };
+
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches && e.touches.length > 0) {
+        updateCoords(e.touches[0].clientX, e.touches[0].clientY);
+      }
     };
 
     const handleTouchMove = (e: TouchEvent) => {
@@ -481,12 +508,27 @@ const Model = React.memo(function Model({
       pointerTargetRef.current = { x: 0, y: 0, isHovered: false };
     };
 
+    // Smooth subtle gaze adjustment when page scrolls down on both mobile and desktop
+    const handleScroll = () => {
+      const scrollY = window.scrollY || document.documentElement.scrollTop;
+      const heroH = window.innerHeight || 800;
+      if (scrollY > 0 && scrollY < heroH * 1.5) {
+        const ratio = Math.min(1, scrollY / heroH);
+        scrollGazeOffsetRef.current = -ratio * 0.42; // Natural downward glance towards incoming content
+      } else {
+        scrollGazeOffsetRef.current = 0;
+      }
+    };
+
     window.addEventListener('pointermove', handlePointerMove, { passive: true });
     window.addEventListener('pointerdown', handlePointerDown, { passive: true });
     window.addEventListener('pointerup', handlePointerUp, { passive: true });
     window.addEventListener('pointercancel', handlePointerUp, { passive: true });
+    window.addEventListener('touchstart', handleTouchStart, { passive: true });
     window.addEventListener('touchmove', handleTouchMove, { passive: true });
     window.addEventListener('touchend', handleTouchEnd, { passive: true });
+    window.addEventListener('touchcancel', handleTouchEnd, { passive: true });
+    window.addEventListener('scroll', handleScroll, { passive: true });
     document.addEventListener('mouseleave', handlePointerLeave);
     window.addEventListener('blur', handleBlur);
 
@@ -495,8 +537,11 @@ const Model = React.memo(function Model({
       window.removeEventListener('pointerdown', handlePointerDown);
       window.removeEventListener('pointerup', handlePointerUp);
       window.removeEventListener('pointercancel', handlePointerUp);
+      window.removeEventListener('touchstart', handleTouchStart);
       window.removeEventListener('touchmove', handleTouchMove);
       window.removeEventListener('touchend', handleTouchEnd);
+      window.removeEventListener('touchcancel', handleTouchEnd);
+      window.removeEventListener('scroll', handleScroll);
       document.removeEventListener('mouseleave', handlePointerLeave);
       window.removeEventListener('blur', handleBlur);
     };
@@ -1445,8 +1490,10 @@ const Model = React.memo(function Model({
     // -------------------------------------------------------------
     const { camera } = state;
     const { x, y, isHovered } = pointerTargetRef.current;
+    const scrollGaze = scrollGazeOffsetRef.current || 0;
     const ndcX = isHovered ? x : 0.0;
-    const ndcY = isHovered ? y : 0.0;
+    const ndcY = isHovered ? y : scrollGaze;
+    const isEngaged = isHovered || Math.abs(scrollGaze) > 0.02;
 
     if (onPointerUpdate) {
       onPointerUpdate(ndcX, ndcY);
@@ -1474,7 +1521,7 @@ const Model = React.memo(function Model({
 
       // Velocity weight: slow motion produces a very subtle response (~40%), normal motion reaches full natural response (100%)
       const speedNorm = Math.min(1.0, pointerVelocityRef.current / 0.6);
-      const velocityWeight = isHovered ? (0.4 + 0.6 * speedNorm) : 0.0;
+      const velocityWeight = isHovered ? (0.4 + 0.6 * speedNorm) : (isEngaged ? 0.75 : 0.0);
 
       // 1. Refresh world positions for eye bones
       bones.leftEye.getWorldPosition(tempLeftEyePosRef.current);
@@ -1497,7 +1544,7 @@ const Model = React.memo(function Model({
       const halfH = camDistToEyes * Math.tan(vFovRad / 2);
       const halfW = halfH * camAspect;
 
-      if (isHovered) {
+      if (isEngaged) {
         tempTargetCamRef.current.set(
           ndcX * halfW,
           ndcY * halfH,
@@ -1527,12 +1574,12 @@ const Model = React.memo(function Model({
       const rawGazePitch = Math.asin(THREE.MathUtils.clamp(tempHeadGazeDirRef.current.y, -1, 1));
 
       // Reaction threshold / dead-zone:
-      // Small mouse movements: eyes respond, head stays still.
-      // Meaningful mouse movements: eyes respond, head subtly follows.
+      // Small movements: eyes respond, head stays still.
+      // Meaningful movements: eyes respond, head subtly follows.
       const gazeDist = Math.sqrt(rawGazeYaw * rawGazeYaw + rawGazePitch * rawGazePitch);
       const headDeadzone = 0.04; // ~2.3 degrees
       let headGazeScale = 0.0;
-      if (isHovered && gazeDist > headDeadzone) {
+      if (isEngaged && gazeDist > headDeadzone) {
         const excess = (gazeDist - headDeadzone) / Math.max(0.001, 0.45 - headDeadzone);
         headGazeScale = THREE.MathUtils.clamp(excess, 0, 1) * velocityWeight;
       }
@@ -1771,6 +1818,23 @@ export function MiaModel({ className = '', showStatusLabel = true }: MiaModelPro
   const orbitControlsRef = useRef<any>(null);
   const { lenis } = useSmoothScroll();
   const { setIsSiteLoading } = useTheme();
+
+  // Detect mobile touchscreen devices so OrbitControls is disabled on phone/tablet to preserve 100% native smooth scrolling
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
+  useEffect(() => {
+    const checkTouch = () => {
+      const hasTouch =
+        typeof window !== 'undefined' &&
+        ('ontouchstart' in window ||
+          navigator.maxTouchPoints > 0 ||
+          window.matchMedia('(pointer: coarse)').matches ||
+          window.innerWidth < 1024);
+      setIsTouchDevice(hasTouch);
+    };
+    checkTouch();
+    window.addEventListener('resize', checkTouch);
+    return () => window.removeEventListener('resize', checkTouch);
+  }, []);
 
   // Real Three.js asset loading tracker
   const { active, progress: realProgress, item, loaded, total } = useProgress();
@@ -2036,7 +2100,10 @@ export function MiaModel({ className = '', showStatusLabel = true }: MiaModelPro
       )}
 
       {/* 3. 4K Ultra-HD 3D WebGL Canvas Layer (Ultra Fast, Zero Lag) */}
-      <div className="absolute inset-0 w-full h-full z-10 pointer-events-none md:pointer-events-auto">
+      <div 
+        className="absolute inset-0 w-full h-full z-10 touch-pan-y pointer-events-auto"
+        style={{ touchAction: 'pan-y' }}
+      >
         <Canvas
           dpr={[1, 1.75]} // 4K retina clamping for locked 60+ FPS
           camera={{ position: [0, 0.08, 1.92], fov: 35 }}
@@ -2086,9 +2153,10 @@ export function MiaModel({ className = '', showStatusLabel = true }: MiaModelPro
           {/* Dynamic Responsive Camera Rig */}
           <ResponsiveCameraRig orbitRef={orbitControlsRef} />
 
-          {/* OrbitControls - Enabled for desktop mouse drag; touch controls set to NONE to guarantee 100% smooth mobile scrolling */}
+          {/* OrbitControls - Enabled for desktop mouse drag; disabled on touchscreens to ensure 100% smooth native mobile scrolling while model tracks touch & scroll */}
           <OrbitControls
             ref={orbitControlsRef}
+            enabled={!isTouchDevice}
             target={[0, 0.08, 0]}
             enableZoom={false}
             enablePan={false}
