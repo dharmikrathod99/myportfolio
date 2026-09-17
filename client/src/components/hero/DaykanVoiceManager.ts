@@ -79,12 +79,28 @@ export function isHindiQuery(text: string): boolean {
   // 1. Devanagari Unicode script range (U+0900 to U+097F)
   if (/[\u0900-\u097F]/.test(text)) return true;
 
-  const lower = text.toLowerCase();
+  const lower = text.toLowerCase().trim();
 
-  // 2. Explicit request for Hindi/Hinglish
-  if (/\b(hindi|hinglish)\b/.test(lower)) return true;
+  // 2. Explicit request to talk in Hindi
+  if (/\b(in hindi|speak in hindi|hindi me|hindi mein|hindi mai|reply in hindi|answer in hindi)\b/.test(lower)) {
+    return true;
+  }
 
-  // 3. Common Romanized Hindi phrases
+  // 3. Clear English question starters / grammar - if present without Devanagari, it is definitely English
+  const englishStarters = [
+    'what is', 'what are', 'what do', 'what can', 'what does',
+    'who is', 'who are', 'who was', 'who created', 'who made', 'who developed', 'who are you',
+    'how to', 'how do', 'how can', 'how are', 'how does', 'how is', 'how are you',
+    'why is', 'why are', 'why do', 'why does',
+    'tell me', 'can you', 'could you', 'please explain', 'explain',
+    'where is', 'where are', 'which is', 'which one',
+    'difference between', 'give me', 'help me', 'show me'
+  ];
+  if (englishStarters.some((s) => lower.startsWith(s) || lower.includes(' ' + s))) {
+    return false;
+  }
+
+  // 4. Common Romanized Hindi phrases
   const hindiPhrases = [
     'kaise ho', 'kya haal', 'kya hal', 'tum kaun', 'aap kaun', 'koun ho', 'kaun ho',
     'kya chal raha', 'kya kar', 'kaise hai', 'kaise hain', 'batao', 'bataye',
@@ -94,15 +110,15 @@ export function isHindiQuery(text: string): boolean {
   ];
   if (hindiPhrases.some((phrase) => lower.includes(phrase))) return true;
 
-  // 4. Romanized Hindi words and verbs frequency scoring
+  // 5. Romanized Hindi keywords (strictly excluding common English words like 'the', 'me', 'to', 'is', 'so')
   const hindiKeywords = new Set([
     'kya', 'kyu', 'kyun', 'kaun', 'koun', 'kahan', 'kaha', 'kaise', 'kaisa', 'kaisi',
-    'kab', 'kitna', 'kitne', 'kitni', 'hai', 'hain', 'ho', 'hoon', 'hun', 'tha', 'thi', 'the',
+    'kab', 'kitna', 'kitne', 'kitni', 'hai', 'hain', 'ho', 'hoon', 'hun', 'tha', 'thi',
     'aap', 'aapka', 'aapki', 'aapke', 'tum', 'tumhara', 'tumhari', 'tumhare',
     'mera', 'meri', 'mere', 'tera', 'teri', 'tere', 'hum', 'hamara', 'mujhe', 'tujhe',
     'banao', 'karo', 'karna', 'kholo', 'chalu', 'band', 'bolo', 'sunao', 'suno', 'dekho',
     'accha', 'achha', 'theek', 'thik', 'bahut', 'bohot', 'kuch', 'nahi', 'nahin', 'bhai',
-    'chahiye', 'sakta', 'sakti', 'sakte', 'hoga', 'hogi', 'hoge', 'kaam', 'baare'
+    'chahiye', 'sakta', 'sakti', 'sakte', 'hoga', 'hogi', 'hoge', 'kaam', 'baare', 'mein'
   ]);
 
   const words = lower.split(/[^a-zA-Z]+/).filter(Boolean);
@@ -110,7 +126,7 @@ export function isHindiQuery(text: string): boolean {
   for (const w of words) {
     if (hindiKeywords.has(w)) matchCount++;
   }
-  return matchCount >= 2 || (words.length <= 3 && matchCount >= 1);
+  return matchCount >= 2;
 }
 
 export const DEFAULT_DAYKAN_GREETING =
@@ -515,11 +531,8 @@ export class DaykanVoiceManager {
       } else if (this.languageMode === 'en') {
         this.recognition.lang = 'en-IN';
       } else {
-        const navLang = typeof navigator !== 'undefined' && navigator.language ? navigator.language : 'en-US';
-        this.recognition.lang =
-          this.lastDetectedLanguage === 'hi' || navLang.toLowerCase().startsWith('hi')
-            ? 'hi-IN'
-            : 'en-IN';
+        // In auto mode, use 'en-IN' to ensure clean transcription of both English and Romanized Hindi phrases
+        this.recognition.lang = 'en-IN';
       }
       this.recognition.interimResults = false;
       this.recognition.maxAlternatives = 1;
@@ -657,6 +670,8 @@ export class DaykanVoiceManager {
       // Update detected language based on response if needed
       if (isHindiQuery(replyText)) {
         this.lastDetectedLanguage = 'hi';
+      } else {
+        this.lastDetectedLanguage = 'en';
       }
 
       // Append verified turns into memory
