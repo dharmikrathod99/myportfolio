@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mic, MicOff, Volume2, Sparkles, AlertCircle, Loader2 } from 'lucide-react';
+import { Mic, MicOff, Volume2, AlertCircle, Loader2 } from 'lucide-react';
 import { DaykanVoiceManager, VoiceState } from './DaykanVoiceManager';
 
 export interface DaykanVoiceWidgetProps {
@@ -13,6 +13,7 @@ export function DaykanVoiceWidget({ className = '' }: DaykanVoiceWidgetProps) {
   const [voiceState, setVoiceState] = useState<VoiceState>('IDLE');
   const [amplitude, setAmplitude] = useState<number>(0);
   const [subtitle, setSubtitle] = useState<string>('');
+  const [languageMode, setLanguageMode] = useState<'auto' | 'hi' | 'en'>('auto');
   const manager = DaykanVoiceManager.getInstance();
 
   useEffect(() => {
@@ -22,11 +23,13 @@ export function DaykanVoiceWidget({ className = '' }: DaykanVoiceWidgetProps) {
     const unsubState = manager.subscribeState(setVoiceState);
     const unsubAmp = manager.subscribeAmplitude(setAmplitude);
     const unsubSub = manager.subscribeSubtitle(setSubtitle);
+    const unsubLang = manager.subscribeLanguageMode(setLanguageMode);
 
     return () => {
       unsubState();
       unsubAmp();
       unsubSub();
+      unsubLang();
     };
   }, [manager]);
 
@@ -69,9 +72,6 @@ export function DaykanVoiceWidget({ className = '' }: DaykanVoiceWidgetProps) {
     }
   };
 
-  const handleManualHelloClick = () => {
-    manager.speakDaykanIntroduction();
-  };
 
   // Generate 5 dynamic audio waveform frequency bars
   const waveHeights = [
@@ -84,7 +84,7 @@ export function DaykanVoiceWidget({ className = '' }: DaykanVoiceWidgetProps) {
 
   return (
     <div
-      className={`fixed bottom-5 sm:bottom-7 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center gap-2 w-full max-w-[92vw] sm:max-w-xs pointer-events-auto select-none ${className}`}
+      className={`fixed bottom-5 sm:bottom-7 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center gap-2 w-auto max-w-[95vw] pointer-events-auto select-none ${className}`}
     >
       {/* 1. Live Spoken Caption Compact Coding Terminal Window */}
       <AnimatePresence>
@@ -94,7 +94,7 @@ export function DaykanVoiceWidget({ className = '' }: DaykanVoiceWidgetProps) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 6, scale: 0.95 }}
             transition={{ duration: 0.22, ease: 'easeOut' }}
-            className={`w-full max-w-[270px] sm:max-w-[310px] rounded-lg bg-[#070D18]/95 border backdrop-blur-2xl shadow-xl overflow-hidden transition-all duration-300 ${
+            className={`w-full max-w-[300px] sm:max-w-[360px] rounded-lg bg-[#070D18]/95 border backdrop-blur-2xl shadow-xl overflow-hidden transition-all duration-300 ${
               voiceState === 'THINKING' || voiceState === 'PREPARING_SPEECH'
                 ? 'border-[#818CF8]/45 shadow-[0_0_20px_rgba(129,140,248,0.2)]'
                 : 'border-[#00F0FF]/30 shadow-[0_0_20px_rgba(0,240,255,0.16)]'
@@ -114,7 +114,7 @@ export function DaykanVoiceWidget({ className = '' }: DaykanVoiceWidgetProps) {
                 <span className="w-1.5 h-1.5 rounded-full bg-[#F59E0B]/90 shadow-[0_0_4px_rgba(245,158,11,0.6)]" />
                 <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]/90 shadow-[0_0_4px_rgba(16,185,129,0.6)]" />
                 <span className="ml-1 text-[8px] font-mono text-slate-400 tracking-wide">
-                  diykan@ai:~
+                  diykan@voice-ai:~
                 </span>
               </div>
 
@@ -164,9 +164,9 @@ export function DaykanVoiceWidget({ className = '' }: DaykanVoiceWidgetProps) {
       </AnimatePresence>
 
       {/* 2. Main Futuristic Microphone Control Capsule */}
-      <div className="flex items-center gap-3 px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-full bg-[#070D1F]/90 border border-[#00F0FF]/35 backdrop-blur-2xl shadow-[0_0_40px_rgba(0,240,255,0.18)]">
+      <div className="flex items-center gap-3 px-4 py-2 sm:px-4.5 sm:py-2.5 rounded-full bg-[#070D1F]/90 border border-[#00F0FF]/35 backdrop-blur-2xl shadow-[0_0_40px_rgba(0,240,255,0.18)]">
         {/* Pulsing Tactical Microphone Button */}
-        <div className="relative flex items-center justify-center">
+        <div className="relative flex items-center justify-center shrink-0">
           {voiceState === 'LISTENING' && (
             <>
               <span className="absolute -inset-1.5 rounded-full bg-[#00F0FF]/30 animate-ping" />
@@ -190,7 +190,7 @@ export function DaykanVoiceWidget({ className = '' }: DaykanVoiceWidgetProps) {
                 ? 'Cancel Speech'
                 : 'Speak to Diykan'
             }
-            className={`relative w-12 h-12 sm:w-13 sm:h-13 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg cursor-pointer ${
+            className={`relative w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg cursor-pointer ${
               voiceState === 'LISTENING'
                 ? 'bg-[#00F0FF] text-[#070D1F] shadow-[0_0_25px_#00F0FF] scale-105'
                 : voiceState === 'THINKING' || voiceState === 'PREPARING_SPEECH'
@@ -217,7 +217,7 @@ export function DaykanVoiceWidget({ className = '' }: DaykanVoiceWidgetProps) {
         </div>
 
         {/* Telemetry Status & Live Frequency Waveform */}
-        <div className="flex flex-col pr-1 sm:pr-2">
+        <div className="flex flex-col pr-2 shrink-0">
           <div className="flex items-center gap-2">
             <span
               className={`w-1.5 h-1.5 rounded-full ${
@@ -232,7 +232,7 @@ export function DaykanVoiceWidget({ className = '' }: DaykanVoiceWidgetProps) {
                   : 'bg-[#38BDF8]'
               }`}
             />
-            <span className="text-[10px] sm:text-[11px] font-mono font-bold tracking-wider uppercase text-[#BAE6FD]">
+            <span className="text-[10px] sm:text-[11px] font-mono font-bold tracking-wider uppercase text-[#BAE6FD] whitespace-nowrap">
               {voiceState === 'LISTENING'
                 ? 'LISTENING... (SPEAK FREELY)'
                 : voiceState === 'THINKING'
@@ -243,7 +243,7 @@ export function DaykanVoiceWidget({ className = '' }: DaykanVoiceWidgetProps) {
                 ? 'DIYKAN SPEAKING...'
                 : voiceState === 'ERROR'
                 ? 'MIC RECONNECT REQUIRED'
-                : 'AI VOICE CONVERSATION'}
+                : 'DIYKAN - YOUR VOICE ASSISTANT'}
             </span>
           </div>
 
@@ -258,33 +258,20 @@ export function DaykanVoiceWidget({ className = '' }: DaykanVoiceWidgetProps) {
                 />
               ))
             ) : voiceState === 'THINKING' ? (
-              <span className="text-[9px] font-mono text-[#A78BFA] tracking-tight animate-pulse flex items-center gap-1">
+              <span className="text-[9px] font-mono text-[#A78BFA] tracking-tight animate-pulse flex items-center gap-1 whitespace-nowrap">
                 Generating neural response...
               </span>
             ) : voiceState === 'PREPARING_SPEECH' ? (
-              <span className="text-[9px] font-mono text-[#A78BFA] tracking-tight animate-pulse flex items-center gap-1">
+              <span className="text-[9px] font-mono text-[#A78BFA] tracking-tight animate-pulse flex items-center gap-1 whitespace-nowrap">
                 Synthesizing neural voice...
               </span>
             ) : (
-              <span className="text-[9px] font-mono text-[#64748B] tracking-tight">
-                Click mic to talk or click Say "Hello"
+              <span className="text-[9px] font-mono text-[#64748B] tracking-tight whitespace-nowrap">
+                Click mic to talk
               </span>
             )}
           </div>
         </div>
-
-        {/* Quick Trigger "Hello" Pill for instant accessibility */}
-        {voiceState === 'IDLE' && (
-          <button
-            type="button"
-            onClick={handleManualHelloClick}
-            title="Click to hear Diykan introduction"
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#00F0FF]/10 hover:bg-[#00F0FF]/25 border border-[#00F0FF]/30 text-[10px] font-mono font-semibold text-[#38BDF8] hover:text-[#00F0FF] transition-all cursor-pointer shadow-[0_0_12px_rgba(0,240,255,0.15)]"
-          >
-            <Sparkles className="w-3 h-3" />
-            <span>Say "Hello"</span>
-          </button>
-        )}
       </div>
     </div>
   );

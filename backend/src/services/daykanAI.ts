@@ -142,6 +142,45 @@ async function dispatchSystemTool(name: string, args: Record<string, any>): Prom
   }
 }
 
+export function isHindiQuery(text: string): boolean {
+  if (!text) return false;
+  // 1. Devanagari Unicode script range (U+0900 to U+097F)
+  if (/[\u0900-\u097F]/.test(text)) return true;
+
+  const lower = text.toLowerCase();
+
+  // 2. Explicit request for Hindi/Hinglish
+  if (/\b(hindi|hinglish)\b/.test(lower)) return true;
+
+  // 3. Common Romanized Hindi phrases
+  const hindiPhrases = [
+    'kaise ho', 'kya haal', 'kya hal', 'tum kaun', 'aap kaun', 'koun ho', 'kaun ho',
+    'kya chal raha', 'kya kar', 'kaise hai', 'kaise hain', 'batao', 'bataye',
+    'chutkula sunao', 'joke sunao', 'namaste', 'namaskar', 'pranam',
+    'dharmik kaun', 'kisne banaya', 'kisne banayi', 'kya hai', 'kya hota',
+    'madad chahiye', 'shukriya', 'dhanyawad', 'theek ho', 'thik ho', 'samjhao'
+  ];
+  if (hindiPhrases.some((phrase) => lower.includes(phrase))) return true;
+
+  // 4. Romanized Hindi words and verbs frequency scoring
+  const hindiKeywords = new Set([
+    'kya', 'kyu', 'kyun', 'kaun', 'koun', 'kahan', 'kaha', 'kaise', 'kaisa', 'kaisi',
+    'kab', 'kitna', 'kitne', 'kitni', 'hai', 'hain', 'ho', 'hoon', 'hun', 'tha', 'thi', 'the',
+    'aap', 'aapka', 'aapki', 'aapke', 'tum', 'tumhara', 'tumhari', 'tumhare',
+    'mera', 'meri', 'mere', 'tera', 'teri', 'tere', 'hum', 'hamara', 'mujhe', 'tujhe',
+    'banao', 'karo', 'karna', 'kholo', 'chalu', 'band', 'bolo', 'sunao', 'suno', 'dekho',
+    'accha', 'achha', 'theek', 'thik', 'bahut', 'bohot', 'kuch', 'nahi', 'nahin', 'bhai',
+    'chahiye', 'sakta', 'sakti', 'sakte', 'hoga', 'hogi', 'hoge', 'kaam', 'baare'
+  ]);
+
+  const words = lower.split(/[^a-zA-Z]+/).filter(Boolean);
+  let matchCount = 0;
+  for (const w of words) {
+    if (hindiKeywords.has(w)) matchCount++;
+  }
+  return matchCount >= 2 || (words.length <= 3 && matchCount >= 1);
+}
+
 export const DAYKAN_SYSTEM_PROMPT = `You are Diykan, the intelligent personal AI assistant created by Dharmik Rathod, known as D.R Developer.
 
 Your primary job is to understand the user's current message, execute real computer system commands whenever requested, and provide the most relevant, accurate, useful, and natural response.
@@ -149,12 +188,14 @@ Your primary job is to understand the user's current message, execute real compu
 CRITICAL VOICE & ACTION RULES:
 1. FULL SYSTEM AUTOMATION: When the user asks to create a folder, create a file, open an application, open a website, check system status, or run a command, you MUST use the corresponding function call tool.
 2. ALWAYS answer the user's actual question or request directly.
-3. LANGUAGE MATCHING: If the user asks in Hindi or Hinglish, reply in conversational Romanized Hinglish (using the Latin/English alphabet ONLY, do NOT use Devanagari script so it can be synthesized by speech audio). If the user asks in English, reply in English. If in Gujarati or any other language, use Romanized alphabet.
-4. CONCISE & SPOKEN-READY: Keep your answer to 1-3 sentences max so it sounds natural when spoken aloud.
+3. LANGUAGE MATCHING DIRECTIVE:
+   - When the user talks or asks in Hindi (whether in Devanagari Hindi or Romanized Hindi/Hinglish like 'tum kaun ho', 'aap kaise ho', 'kya haal hai', 'dharmik kaun hai', etc.), you MUST give your entire answer in Hindi (हिंदी).
+   - Otherwise, when the user asks in English or any other language, you MUST give your entire answer in English.
+4. CONCISE & SPOKEN-READY: Keep your answer to 1-2 sentences max so it sounds natural when spoken aloud.
 5. NO FORMATTING: Do NOT use markdown asterisks (**bold**), hashtags (# headings), backticks, bullet lists, or tables.
 6. NEVER begin every response with "I am Diykan..." or repeat your introduction unless the user specifically asks who you are.
 7. If the user asks about Dharmik Rathod or D.R Developer, highlight his expertise as a Full-Stack Engineer specializing in MERN, Next.js, Three.js 3D WebGL, and scalable AI systems.
-8. If the user asks technical, general, coding, or casual questions, answer accurately and directly.`;
+8. If the user asks technical, general, coding, or casual questions, answer accurately and directly in the appropriate language.`;
 
 export interface IDaykanAIService {
   generateResponse(
@@ -233,16 +274,16 @@ export class DaykanConversationalAIService implements IDaykanAIService {
     if (geminiKey && geminiKey.length > 5) {
       // Prioritize verified ultra-fast models (gemini-3.5-flash-lite responds in ~700ms)
       const candidateModels = [
-        'gemini-3.5-flash-lite',
-        'gemini-flash-lite-latest',
         'gemini-3.6-flash',
         'gemini-3.5-flash',
+        'gemini-3.5-flash-lite',
+        'gemini-flash-lite-latest',
       ];
 
       for (const model of candidateModels) {
         try {
           const controller = new AbortController();
-          const timeoutMs = 2500;
+          const timeoutMs = 4000;
           const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
           const geminiRes = await fetch(
             `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey.trim()}`,
@@ -431,6 +472,124 @@ export class DaykanConversationalAIService implements IDaykanAIService {
     const priorContext = history
       .map((h) => h.content.toLowerCase())
       .join(' ');
+
+    const isHindi = isHindiQuery(input);
+
+    // ------------------------------------------------------------------
+    // HINDI CONVERSATIONAL REASONING ENGINE
+    // ------------------------------------------------------------------
+    if (isHindi) {
+      if (
+        cleanQ.includes('who created it') ||
+        cleanQ.includes('who made it') ||
+        cleanQ.includes('kisne banaya') ||
+        cleanQ.includes('kisne banayi')
+      ) {
+        if (priorContext.includes('react')) {
+          return "रिएक्ट को मेटा के सॉफ्टवेयर इंजीनियर जॉर्डन वॉके ने बनाया था और इसे 2013 में ओपन-सोर्स किया गया था।";
+        }
+        if (priorContext.includes('mongodb')) {
+          return "मोंगोडीबी को ड्वाइट मेरिमैन, एलियट होरोविट्ज़ और केविन रयान ने 2007 में 10gen पर विकसित किया था।";
+        }
+        if (priorContext.includes('angular')) {
+          return "एंगुलर को मूल रूप से 2010 में गूगल पर मिस्को हेवेरी और एडम एब्रॉन्स ने बनाया था।";
+        }
+        if (priorContext.includes('javascript') || priorContext.includes('js')) {
+          return "जावास्क्रिप्ट को 1995 में ब्रेंडन आइच ने नेटस्केप में सिर्फ 10 दिनों में तैयार किया था।";
+        }
+        if (priorContext.includes('node')) {
+          return "नोड.जेएस को 2009 में रयान डाहल ने क्रोम के V8 इंजन पर आधारित रनटाइम के रूप में बनाया था।";
+        }
+        if (priorContext.includes('python')) {
+          return "पायथन को गुइडो वैन रोसुम ने बनाया था और पहली बार 1991 में रिलीज किया था।";
+        }
+        return "इसे इसकी ओपन-सोर्स डेवलपर कम्युनिटी और कोर सॉफ्टवेयर इंजीनियरिंग टीम ने बनाया था।";
+      }
+
+      if (
+        cleanQ === 'tum kaun ho' ||
+        cleanQ.includes('tum kaun') ||
+        cleanQ.includes('aap kaun') ||
+        cleanQ.includes('koun ho') ||
+        cleanQ.includes('who are you') ||
+        cleanQ.includes('naam kya')
+      ) {
+        return "नमस्ते! मैं दीकन (Diykan) हूँ, जिसे धार्मिक राठौड़ (D.R Developer) ने बनाया है। मैं आपकी क्या मदद कर सकता हूँ?";
+      }
+
+      if (
+        cleanQ.includes('kisne banaya') ||
+        cleanQ.includes('tumhe kisne') ||
+        cleanQ.includes('creator') ||
+        cleanQ.includes('who created you') ||
+        cleanQ.includes('dharmik kaun')
+      ) {
+        return "मुझे धार्मिक राठौड़ ने बनाया है, जिन्हें D.R Developer के नाम से जाना जाता है। वे एक फुल-स्टैक सॉफ्टवेयर इंजीनियर और AI डेवलपर हैं।";
+      }
+
+      if (
+        (q.includes('react') && q.includes('angular')) ||
+        q.includes('difference between react and angular') ||
+        q.includes('react ya angular')
+      ) {
+        return "रिएक्ट एक फ्लेक्सिबल यूआई लाइब्रेरी है जो वर्चुअल DOM का उपयोग करती है, जबकि एंगुलर एक कम्प्लीट टाइपस्क्रिप्ट फ्रेमवर्क है जिसमें रूटिंग और स्टेट मैनेजमेंट पहले से मौजूद है।";
+      }
+
+      if (q.includes('react kya hai') || q.includes('what is react') || cleanQ === 'react') {
+        return "रिएक्ट एक प्रसिद्ध जावास्क्रिप्ट लाइब्रेरी है जिसे मेटा ने डायनामिक और रियूजेबल वेब यूजर इंटरफेस बनाने के लिए बनाया है।";
+      }
+
+      if (q.includes('mongodb kya hai') || q.includes('what is mongodb') || cleanQ === 'mongodb') {
+        return "मोंगोडीबी एक आधुनिक NoSQL डेटाबेस है, जो डेटा को लचीले JSON जैसे डॉक्यूमेंट्स में स्टोर करता है और तेजी से स्केल होता है।";
+      }
+
+      if (q.includes('api kya') || q.includes('what is an api') || q.includes('api kya hota')) {
+        return "एपीआई (API) नियमों का एक ऐसा सेट है जो दो अलग-अलग सॉफ्टवेयर ऐप्लिकेशन्स को आपस में डेटा और फंक्शन्स शेयर करने देता है।";
+      }
+
+      if (q.includes('javascript kya') || cleanQ === 'javascript') {
+        return "जावास्क्रिप्ट एक हाई-लेवल प्रोग्रामिंग लैंग्वेज है जो वेब ब्राउज़र में इंटरएक्टिव और डायनामिक फीचर्स को पावर देती है।";
+      }
+
+      if (q.includes('typescript kya') || cleanQ === 'typescript') {
+        return "टाइपस्क्रिप्ट माइक्रोसॉफ्ट द्वारा बनाई गई जावास्क्रिप्ट का टाइप्ड सुपरसेट है, जो कोड में एरर्स को पहले ही पकड़ने में मदद करता है।";
+      }
+
+      if (q.includes('project') || q.includes('dharmik') || q.includes('kaam')) {
+        return "धार्मिक ने एंटरप्राइज MERN SaaS प्लेटफॉर्म, AI ऑटोमेशन टूल्स, ई-कॉमर्स स्टोर और यह 3D ह्यूमनॉइड AI असिस्टेंट विकसित किया है।";
+      }
+
+      if (q.includes('skills') || q.includes('technologies')) {
+        return "धार्मिक रिएक्ट, नेक्स्ट.जेएस, टाइपस्क्रिप्ट, नोड, मोंगोडीबी, Three.js 3D और AI मॉडल्स में विशेषज्ञता रखते हैं।";
+      }
+
+      if (q.includes('joke') || q.includes('chutkula')) {
+        const hindiJokes = [
+          "एक प्रोग्रामर ने अपनी पत्नी से पूछा: बाजार से एक ब्रेड लाओ, और अगर अंडे मिलें तो 10 ले आना। वह 10 ब्रेड लेकर वापस आया!",
+          "दुनिया में 10 तरह के लोग होते हैं: वो जो बाइनरी समझते हैं, और वो जो नहीं समझते।",
+          "प्रोग्रामर डार्क मोड क्यों पसंद करते हैं? क्योंकि रोशनी कीड़ों (बग्स) को आकर्षित करती है!",
+        ];
+        return hindiJokes[Math.floor(Math.random() * hindiJokes.length)];
+      }
+
+      if (cleanQ === 'namaste' || cleanQ === 'namaskar' || cleanQ === 'pranam' || cleanQ === 'hello' || cleanQ === 'hi') {
+        return "नमस्ते! आज मैं आपकी क्या सहायता कर सकता हूँ?";
+      }
+
+      if (cleanQ.includes('kaise ho') || cleanQ.includes('kya haal') || cleanQ.includes('how are you')) {
+        return "मैं बहुत अच्छा हूँ, पूछने के लिए धन्यवाद! मैं आपकी कोडिंग, वेब डेवलपमेंट या धार्मिक के प्रोजेक्ट्स में मदद के लिए तैयार हूँ। बताइए?";
+      }
+
+      if (cleanQ.includes('kya kar sakte ho') || cleanQ.includes('madad')) {
+        return "मैं आपके तकनीकी और कोडिंग सवालों के जवाब दे सकता हूँ, कंप्यूटर सिस्टम पर टास्क्स रन कर सकता हूँ और प्रोजेक्ट्स की जानकारी दे सकता हूँ।";
+      }
+
+      if (cleanQ.includes('shukriya') || cleanQ.includes('dhanyawad') || cleanQ.includes('thanks')) {
+        return "आपका बहुत-बहुत स्वागत है! अगर आपको कुछ और पूछना हो तो जरूर बताएं।";
+      }
+
+      return `मैं समझ गया कि आप ${input.slice(0, 30)} के बारे में पूछ रहे हैं। मैं इसमें आपकी क्या मदद करूँ?`;
+    }
 
     // ------------------------------------------------------------------
     // Contextual Follow-up Resolution ("it", "they", "that")

@@ -38,9 +38,9 @@ const TEXT_SLIDES: TextSlide[] = [
     rightTelemetry: 'CIRCUIT: 60Hz PULSE',
     rightTelemetryMobile: '60Hz PULSE',
     fontSizeClass:
-      'text-2xl xs:text-3xl sm:text-5xl md:text-7xl lg:text-8xl xl:text-9xl 2xl:text-[10.5rem]',
+      'text-2xl xs:text-3xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl 2xl:text-[7.5rem]',
     trackingClass:
-      'tracking-[0.08em] xs:tracking-[0.12em] sm:tracking-[0.16em] md:tracking-[0.20em]',
+      'tracking-[0.06em] xs:tracking-[0.08em] sm:tracking-[0.10em] md:tracking-[0.12em] lg:tracking-[0.15em]',
   },
   {
     id: 'dharmik_rathod',
@@ -55,9 +55,9 @@ const TEXT_SLIDES: TextSlide[] = [
     rightTelemetry: 'CORE // PORTFOLIO 2026',
     rightTelemetryMobile: 'PORTFOLIO 2026',
     fontSizeClass:
-      'text-[1.25rem] xs:text-[1.55rem] sm:text-3xl md:text-5xl lg:text-6xl xl:text-7xl 2xl:text-[6.8rem]',
+      'text-[1.1rem] xs:text-[1.3rem] sm:text-2xl md:text-3xl lg:text-[2.5rem] xl:text-[3.25rem] 2xl:text-[4.25rem]',
     trackingClass:
-      'tracking-[0.03em] xs:tracking-[0.05em] sm:tracking-[0.08em] md:tracking-[0.10em]',
+      'tracking-[0.02em] xs:tracking-[0.03em] sm:tracking-[0.04em] md:tracking-[0.05em] lg:tracking-[0.06em]',
   },
 ];
 
@@ -93,7 +93,7 @@ export default function ElectricBackgroundText({
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[95vw] max-w-[1300px] h-[38vh] max-h-[380px] rounded-full bg-[radial-gradient(ellipse_at_center,_rgba(0,163,255,0.08)_0%,_rgba(2,132,199,0.025)_50%,_transparent_75%)] blur-2xl pointer-events-none" />
 
           {/* 2. Main Symmetrical Wing Container: [LEFT] --- (Model Clearance Gap) --- [RIGHT] */}
-          <div className="relative flex items-center justify-center w-full max-w-[98vw] 2xl:max-w-[1700px] px-1 xs:px-2 sm:px-6 translate-y-28 sm:translate-y-0">
+          <div className="relative flex items-center justify-center w-full max-w-[96vw] 2xl:max-w-[1500px] px-4 xs:px-6 sm:px-10 md:px-12 lg:px-16 translate-y-28 sm:translate-y-0">
             {/* Continuous Horizontal Voltage Conductor Line passing behind Model */}
             <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[92vw] max-w-[1500px] h-[1px] bg-gradient-to-r from-transparent via-[#00A3FF]/40 to-transparent pointer-events-none" />
 
@@ -137,7 +137,7 @@ export default function ElectricBackgroundText({
             </svg>
 
             {/* ----------------- LEFT WING ----------------- */}
-            <div className="flex-1 flex flex-col items-end pr-1 xs:pr-2 sm:pr-5 md:pr-8 lg:pr-12 xl:pr-16 z-10">
+            <div className="flex-1 flex flex-col items-end pr-1 xs:pr-2 sm:pr-3 md:pr-4 lg:pr-6 z-10 min-w-0">
               {/* Left Top Subtitle Badge */}
               <AnimatePresence mode="wait">
                 <motion.div
@@ -163,7 +163,7 @@ export default function ElectricBackgroundText({
               </AnimatePresence>
 
               {/* Left Word ("DIY" -> "DHARMIK") */}
-              <div className="relative min-h-[40px] xs:min-h-[50px] sm:min-h-[75px] md:min-h-[90px] lg:min-h-[110px] xl:min-h-[135px] 2xl:min-h-[160px] flex items-center justify-end">
+              <div className="relative min-h-[40px] xs:min-h-[48px] sm:min-h-[60px] md:min-h-[75px] lg:min-h-[90px] xl:min-h-[105px] 2xl:min-h-[125px] flex items-center justify-end">
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={`l-word-${currentSlide.id}`}
@@ -191,7 +191,7 @@ export default function ElectricBackgroundText({
                     {/* Stroke Rim Layer */}
                     <span
                       aria-hidden="true"
-                      className={`absolute inset-0 flex items-center justify-end font-display font-black leading-none uppercase select-none text-transparent ${currentSlide.fontSizeClass} ${currentSlide.trackingClass}`}
+                      className={`absolute inset-0 flex items-center justify-end font-display font-black leading-none uppercase select-none text-transparent whitespace-nowrap ${currentSlide.fontSizeClass} ${currentSlide.trackingClass}`}
                       style={{
                         WebkitTextStroke: '1.5px rgba(0, 163, 255, 0.75)',
                         textShadow: '0 0 12px rgba(0, 163, 255, 0.45)',
@@ -202,7 +202,7 @@ export default function ElectricBackgroundText({
 
                     {/* Core Gradient with Electric Shock Current */}
                     <h1
-                      className={`relative z-10 text-right font-display font-black leading-none uppercase select-none animate-electric-shock ${currentSlide.fontSizeClass} ${currentSlide.trackingClass}`}
+                      className={`relative z-10 text-right font-display font-black leading-none uppercase select-none animate-electric-shock whitespace-nowrap ${currentSlide.fontSizeClass} ${currentSlide.trackingClass}`}
                       style={{
                         backgroundImage:
                           'linear-gradient(105deg, rgba(3, 105, 161, 0.85) 0%, rgba(0, 163, 255, 0.95) 35%, #00F0FF 48%, #FFFFFF 50%, #00F0FF 52%, rgba(0, 163, 255, 0.95) 65%, rgba(3, 105, 161, 0.85) 100%)',
@@ -243,14 +243,14 @@ export default function ElectricBackgroundText({
             </div>
 
             {/* ----------------- CENTER MODEL CLEARANCE GAP ----------------- */}
-            <div className="w-2 xs:w-3 sm:w-6 md:w-[260px] lg:w-[320px] xl:w-[380px] 2xl:w-[420px] flex-shrink-0 flex items-center justify-center relative">
+            <div className="w-2 xs:w-3 sm:w-6 md:w-[160px] lg:w-[200px] xl:w-[240px] 2xl:w-[270px] flex-shrink-0 flex items-center justify-center relative">
               {/* High-Voltage Center Surge Arc across the gap */}
               <div className="w-full h-[1px] bg-gradient-to-r from-[#00D4FF]/60 via-[#7DF9FF] to-[#00D4FF]/60 shadow-[0_0_8px_#00F0FF]" />
               <div className="absolute w-2 h-2 rounded-full bg-[#00F0FF] shadow-[0_0_10px_#00F0FF] animate-spark-jitter" />
             </div>
 
             {/* ----------------- RIGHT WING ----------------- */}
-            <div className="flex-1 flex flex-col items-start pl-1 xs:pl-2 sm:pl-5 md:pl-8 lg:pl-12 xl:pl-16 z-10">
+            <div className="flex-1 flex flex-col items-start pl-1 xs:pl-2 sm:pl-3 md:pl-4 lg:pl-6 z-10 min-w-0">
               {/* Right Top Subtitle Badge */}
               <AnimatePresence mode="wait">
                 <motion.div
@@ -276,7 +276,7 @@ export default function ElectricBackgroundText({
               </AnimatePresence>
 
               {/* Right Word ("KAN" -> "RATHOD") */}
-              <div className="relative min-h-[40px] xs:min-h-[50px] sm:min-h-[75px] md:min-h-[90px] lg:min-h-[110px] xl:min-h-[135px] 2xl:min-h-[160px] flex items-center justify-start">
+              <div className="relative min-h-[40px] xs:min-h-[48px] sm:min-h-[60px] md:min-h-[75px] lg:min-h-[90px] xl:min-h-[105px] 2xl:min-h-[125px] flex items-center justify-start">
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={`r-word-${currentSlide.id}`}
@@ -304,7 +304,7 @@ export default function ElectricBackgroundText({
                     {/* Stroke Rim Layer */}
                     <span
                       aria-hidden="true"
-                      className={`absolute inset-0 flex items-center justify-start font-display font-black leading-none uppercase select-none text-transparent ${currentSlide.fontSizeClass} ${currentSlide.trackingClass}`}
+                      className={`absolute inset-0 flex items-center justify-start font-display font-black leading-none uppercase select-none text-transparent whitespace-nowrap ${currentSlide.fontSizeClass} ${currentSlide.trackingClass}`}
                       style={{
                         WebkitTextStroke: '1.5px rgba(0, 163, 255, 0.75)',
                         textShadow: '0 0 12px rgba(0, 163, 255, 0.45)',
@@ -315,7 +315,7 @@ export default function ElectricBackgroundText({
 
                     {/* Core Gradient with Electric Shock Current */}
                     <h1
-                      className={`relative z-10 text-left font-display font-black leading-none uppercase select-none animate-electric-shock ${currentSlide.fontSizeClass} ${currentSlide.trackingClass}`}
+                      className={`relative z-10 text-left font-display font-black leading-none uppercase select-none animate-electric-shock whitespace-nowrap ${currentSlide.fontSizeClass} ${currentSlide.trackingClass}`}
                       style={{
                         backgroundImage:
                           'linear-gradient(105deg, rgba(3, 105, 161, 0.85) 0%, rgba(0, 163, 255, 0.95) 35%, #00F0FF 48%, #FFFFFF 50%, #00F0FF 52%, rgba(0, 163, 255, 0.95) 65%, rgba(3, 105, 161, 0.85) 100%)',
