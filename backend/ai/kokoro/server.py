@@ -28,6 +28,8 @@ DEFAULT_LANG = os.environ.get("KOKORO_LANG", "a") # 'a' = American English
 # Global pipeline instance loaded ONCE at startup
 pipeline = None
 default_voice_pack = None
+audio_cache = {}
+MAX_CACHE_SIZE = 120
 
 class KokoroHTTPServer(ThreadingHTTPServer):
     daemon_threads = True
@@ -108,25 +110,40 @@ class KokoroRequestHandler(BaseHTTPRequestHandler):
 
         voice = data.get('voice') or DEFAULT_VOICE
         speed = float(data.get('speed', 1.0))
+        cache_key = f"{text}|{voice}|{speed}"
+
+        if cache_key in audio_cache:
+            cached_wav, cached_sample_rate, cached_duration = audio_cache[cache_key]
+            self.send_response(200)
+            self.send_header('Content-Type', 'audio/wav')
+            self.send_header('Content-Length', str(len(cached_wav)))
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.send_header('X-Sample-Rate', str(cached_sample_rate))
+            self.send_header('X-Duration-Seconds', str(cached_duration))
+            self.send_header('X-Cache', 'HIT')
+            self.end_headers()
+            self.wfile.write(cached_wav)
+            return
 
         try:
             # Generate audio in memory (model loaded once at server startup)
             print(f"[Kokoro Server] Synthesizing: \"{text[:45]}...\" (voice: {voice}, speed: {speed})", flush=True)
-            generator = pipeline(text, voice=voice, speed=speed, split_pattern=r'\n+')
             audio_chunks = []
             sample_rate = 24000
 
-            for item in generator:
-                audio = None
-                if hasattr(item, 'audio') and item.audio is not None:
-                    audio = item.audio
-                elif isinstance(item, (tuple, list)) and len(item) >= 3:
-                    audio = item[2]
-                elif hasattr(item, 'output') and item.output is not None:
-                    audio = getattr(item.output, 'audio', item.output)
+            with torch.inference_mode():
+                generator = pipeline(text, voice=voice, speed=speed, split_pattern=r'\n+')
+                for item in generator:
+                    audio = None
+                    if hasattr(item, 'audio') and item.audio is not None:
+                        audio = item.audio
+                    elif isinstance(item, (tuple, list)) and len(item) >= 3:
+                        audio = item[2]
+                    elif hasattr(item, 'output') and item.output is not None:
+                        audio = getattr(item.output, 'audio', item.output)
 
-                if audio is not None and len(audio) > 0:
-                    audio_chunks.append(audio)
+                    if audio is not None and len(audio) > 0:
+                        audio_chunks.append(audio)
 
             if not audio_chunks:
                 self.send_response(500)
@@ -141,13 +158,22 @@ class KokoroRequestHandler(BaseHTTPRequestHandler):
             wav_io = io.BytesIO()
             sf.write(wav_io, full_audio, sample_rate, format='WAV', subtype='PCM_16')
             wav_bytes = wav_io.getvalue()
+            duration_sec = f"{len(full_audio) / sample_rate:.2f}"
+
+            # Store in cache
+            if len(audio_cache) >= MAX_CACHE_SIZE:
+                # Remove oldest entry
+                first_key = next(iter(audio_cache))
+                audio_cache.pop(first_key, None)
+            audio_cache[cache_key] = (wav_bytes, sample_rate, duration_sec)
 
             self.send_response(200)
             self.send_header('Content-Type', 'audio/wav')
             self.send_header('Content-Length', str(len(wav_bytes)))
             self.send_header('Access-Control-Allow-Origin', '*')
             self.send_header('X-Sample-Rate', str(sample_rate))
-            self.send_header('X-Duration-Seconds', f"{len(full_audio) / sample_rate:.2f}")
+            self.send_header('X-Duration-Seconds', duration_sec)
+            self.send_header('X-Cache', 'MISS')
             self.end_headers()
             self.wfile.write(wav_bytes)
 
@@ -178,9 +204,12 @@ def main():
     print(f" Default Voice: {args.voice}")
     print("=" * 60)
 
-    # Optimize PyTorch CPU memory footprint
+    # Optimize PyTorch CPU inference threads for multi-core CPUs
     try:
-        torch.set_num_threads(1)
+        cpu_total = os.cpu_count() or 4
+        optimal_threads = min(4, max(2, cpu_total // 2))
+        torch.set_num_threads(optimal_threads)
+        print(f"[Kokoro-82M] Configured PyTorch CPU threads: {optimal_threads} (total CPUs: {cpu_total})", flush=True)
     except Exception:
         pass
 

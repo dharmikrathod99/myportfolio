@@ -187,6 +187,32 @@ export function generatePhoneticsForText(text: string, estimatedDuration: number
   return segments;
 }
 
+/**
+ * Splits text into natural spoken sentence chunks for streaming TTS pipelining
+ */
+export function splitTextIntoSentences(text: string): string[] {
+  const trimmed = (text || '').trim();
+  if (!trimmed) return [];
+
+  // Protect initials and abbreviations (e.g. "D.R Developer", "Dr.", "Mr.") from being treated as sentence ends
+  const protectedText = trimmed.replace(/\b([A-Z])\./g, '$1__DOT__');
+
+  const raw = protectedText.match(/[^.!?\n]+[.!?]+(?:\s+|$)|[^.!?\n]+$/g);
+  if (!raw || raw.length <= 1) return [trimmed];
+  const sentences: string[] = [];
+  for (const s of raw) {
+    const restored = s.replace(/__DOT__/g, '.').trim();
+    if (restored) {
+      if (sentences.length > 0 && restored.split(/\s+/).length < 3) {
+        sentences[sentences.length - 1] += ' ' + restored;
+      } else {
+        sentences.push(restored);
+      }
+    }
+  }
+  return sentences.length > 0 ? sentences : [trimmed];
+}
+
 export class DaykanVoiceManager {
   private static instance: DaykanVoiceManager | null = null;
 
@@ -203,6 +229,10 @@ export class DaykanVoiceManager {
   private currentObjectUrl: string | null = null;
   private abortController: AbortController | null = null;
   private activeRequestId: number = 0;
+
+  // Streaming speech pipelining queue
+  private audioQueue: { blob: Blob; text: string; duration: number }[] = [];
+  private pendingSentencePromises: Promise<Blob | null>[] = [];
 
   public state: VoiceState = 'IDLE';
   public currentAmplitude: number = 0;
@@ -311,7 +341,7 @@ export class DaykanVoiceManager {
   /**
    * Initializes Web Audio context and AnalyserNode
    */
-  private initAudio() {
+  public initAudio() {
     if (typeof window === 'undefined') return;
 
     if (!this.audioCtx) {
@@ -340,7 +370,7 @@ export class DaykanVoiceManager {
       this.audioElement.crossOrigin = 'anonymous';
 
       this.audioElement.addEventListener('ended', () => {
-        this.finishSpeech();
+        this.handleAudioEnded();
       });
 
       this.audioElement.addEventListener('error', () => {
@@ -537,10 +567,10 @@ export class DaykanVoiceManager {
       this.setState('PREPARING_SPEECH');
       this.setSubtitle('Preparing response...');
 
-      console.log(`[TTS]\nText being sent to Kokoro:\n"${replyText}"`);
+      console.log(`[TTS]\nText being sent to Kokoro (Pipelined Stream):\n"${replyText}"`);
 
-      // 3. Request Kokoro speech synthesis and only reveal text when audio ACTUALLY begins playing
-      await this.speakGeneratedSpeech(replyText, currentRequestId);
+      // 3. Request Kokoro streaming sentence pipelining for ultra-fast TTFR
+      await this.speakPipelinedSpeech(replyText, currentRequestId);
     } catch (err: any) {
       if (err.name === 'AbortError' || currentRequestId !== this.activeRequestId) {
         console.log('[Daykan] Request cancelled or superseded.');
@@ -550,6 +580,174 @@ export class DaykanVoiceManager {
       const fallbackReply = "Sorry, I couldn't process that right now. Please try again.";
       this.setSubtitle(fallbackReply);
       await this.speakWithSpeechSynthesis(fallbackReply, currentRequestId);
+    }
+  }
+
+  /**
+   * Fetches TTS audio blob for an individual sentence
+   */
+  private async fetchSentenceAudio(text: string, signal?: AbortSignal): Promise<Blob | null> {
+    try {
+      const ttsRes = await fetch('/api/daykan/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+        signal,
+      });
+      if (!ttsRes.ok) return null;
+      const contentType = ttsRes.headers.get('content-type') || '';
+      if (!contentType.includes('audio')) return null;
+      return await ttsRes.blob();
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Seamless transition to the next queued sentence segment when previous segment audio ends
+   */
+  private handleAudioEnded() {
+    if (this.audioQueue.length > 0) {
+      const next = this.audioQueue.shift()!;
+      if (this.currentObjectUrl) {
+        URL.revokeObjectURL(this.currentObjectUrl);
+      }
+      this.currentObjectUrl = URL.createObjectURL(next.blob);
+
+      if (this.audioElement) {
+        this.audioElement.src = this.currentObjectUrl;
+        this.scheduledTimeline = generatePhoneticsForText(next.text, next.duration);
+        this.speechStartTime = performance.now();
+        this.audioElement.play().catch((err) => {
+          console.warn('[Daykan] Queued audio playback error:', err);
+          this.finishSpeech();
+        });
+      }
+      return;
+    }
+
+    this.finishSpeech();
+  }
+
+  /**
+   * Streaming sentence-level TTS pipelining:
+   * 1. Splits full text into natural sentence chunks.
+   * 2. Immediately dispatches Sentence 0 to TTS.
+   * 3. In parallel, fires TTS requests for subsequent sentences.
+   * 4. As soon as Sentence 0 audio is ready, speech starts immediately (TTFR < 3s).
+   * 5. While Sentence 0 is playing, Sentence 1 audio downloads and queues in memory.
+   * 6. Consecutive sentences play gaplessly.
+   */
+  public async speakPipelinedSpeech(fullText: string, requestId?: number) {
+    if (typeof window === 'undefined') return;
+
+    const sentences = splitTextIntoSentences(fullText);
+    if (sentences.length <= 1) {
+      return await this.speakGeneratedSpeech(fullText, requestId);
+    }
+
+    this.initAudio();
+    this.audioQueue = [];
+
+    try {
+      this.abortController = new AbortController();
+      const signal = this.abortController.signal;
+
+      // 1. Immediately request TTS for the first sentence
+      const firstSentence = sentences[0];
+      const firstAudioPromise = this.fetchSentenceAudio(firstSentence, signal);
+
+      // 2. CONCURRENTLY trigger TTS requests for remaining sentences in background
+      const remainingItems = sentences.slice(1);
+      remainingItems.forEach((sentenceText) => {
+        const sentencePromise = this.fetchSentenceAudio(sentenceText, signal).then((blob) => {
+          if (blob && (requestId === undefined || requestId === this.activeRequestId)) {
+            const wordCount = sentenceText.split(/\s+/).length;
+            const dur = Math.max(1.8, wordCount * 0.42);
+            this.audioQueue.push({ blob, text: sentenceText, duration: dur });
+          }
+          return blob;
+        });
+        this.pendingSentencePromises.push(sentencePromise);
+      });
+
+      // 3. Await first sentence audio
+      const firstBlob = await firstAudioPromise;
+      if (requestId !== undefined && requestId !== this.activeRequestId) return;
+
+      if (!firstBlob) {
+        throw new Error('First sentence TTS synthesis returned null');
+      }
+
+      // 4. Play first sentence audio immediately
+      if (this.currentObjectUrl) {
+        URL.revokeObjectURL(this.currentObjectUrl);
+      }
+      this.currentObjectUrl = URL.createObjectURL(firstBlob);
+
+      if (this.audioElement) {
+        this.audioElement.src = this.currentObjectUrl;
+        const wordCount = firstSentence.split(/\s+/).length;
+        const estimatedDur = Math.max(1.8, wordCount * 0.42);
+        this.scheduledTimeline = generatePhoneticsForText(firstSentence, estimatedDur);
+
+        if (this.audioCtx && this.audioCtx.state === 'suspended') {
+          await this.audioCtx.resume();
+        }
+
+        // Wait until audio ACTUALLY begins playing before revealing subtitles & state
+        await new Promise<void>((resolve, reject) => {
+          let started = false;
+
+          const onPlaying = () => {
+            if (!started) {
+              started = true;
+              cleanup();
+              resolve();
+            }
+          };
+
+          const onError = (e: any) => {
+            if (!started) {
+              started = true;
+              cleanup();
+              reject(e);
+            }
+          };
+
+          const cleanup = () => {
+            this.audioElement?.removeEventListener('playing', onPlaying);
+            this.audioElement?.removeEventListener('error', onError);
+          };
+
+          this.audioElement?.addEventListener('playing', onPlaying, { once: true });
+          this.audioElement?.addEventListener('error', onError, { once: true });
+
+          const playPromise = this.audioElement?.play();
+          if (playPromise !== undefined) {
+            playPromise.catch((err) => onError(err));
+          }
+        });
+
+        if (requestId !== undefined && requestId !== this.activeRequestId) {
+          this.audioElement.pause();
+          return;
+        }
+
+        // AT THE EXACT MOMENT AUDIO STARTS PLAYING:
+        this.isSyntheticSpeaking = false;
+        this.setState('SPEAKING');
+        this.setSubtitle(fullText);
+        this.speechStartTime = performance.now();
+        this.startLipSyncPlaybackLoop();
+        return;
+      }
+    } catch (pipedErr: any) {
+      if (pipedErr.name === 'AbortError' || (requestId !== undefined && requestId !== this.activeRequestId)) return;
+      console.warn('[Daykan] Pipelined speech error, falling back to speech synthesis:', pipedErr);
+      if (requestId === undefined || requestId === this.activeRequestId) {
+        this.speakWithSpeechSynthesis(fullText, requestId);
+      }
     }
   }
 
@@ -951,6 +1149,8 @@ export class DaykanVoiceManager {
   }
 
   private finishSpeech() {
+    this.audioQueue = [];
+    this.pendingSentencePromises = [];
     if (this.audioElement) {
       this.audioElement.pause();
       this.audioElement.currentTime = 0;
@@ -969,6 +1169,8 @@ export class DaykanVoiceManager {
    */
   public cancelSpeech() {
     this.activeRequestId++;
+    this.audioQueue = [];
+    this.pendingSentencePromises = [];
     if (this.abortController) {
       this.abortController.abort();
       this.abortController = null;

@@ -16,6 +16,9 @@ export function DaykanVoiceWidget({ className = '' }: DaykanVoiceWidgetProps) {
   const manager = DaykanVoiceManager.getInstance();
 
   useEffect(() => {
+    // Pre-initialize Web Audio & AnalyserNode on widget mount for zero-latency response
+    manager.initAudio();
+
     const unsubState = manager.subscribeState(setVoiceState);
     const unsubAmp = manager.subscribeAmplitude(setAmplitude);
     const unsubSub = manager.subscribeSubtitle(setSubtitle);
@@ -41,7 +44,7 @@ export function DaykanVoiceWidget({ className = '' }: DaykanVoiceWidgetProps) {
 
       const timer = setTimeout(() => {
         manager.processUserQuery(queryParam);
-      }, 1500);
+      }, 150);
       return () => clearTimeout(timer);
     }
   }, [manager]);

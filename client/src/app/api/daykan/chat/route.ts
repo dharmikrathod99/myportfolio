@@ -33,15 +33,16 @@ export async function POST(req: NextRequest) {
     const geminiKey = (process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || '').trim();
     if (geminiKey && geminiKey.length > 5) {
       const candidateModels = [
-        'gemini-3.6-flash',
-        'gemini-3.5-flash',
         'gemini-3.5-flash-lite',
         'gemini-flash-lite-latest',
+        'gemini-3.6-flash',
+        'gemini-3.5-flash',
       ];
       for (const model of candidateModels) {
         try {
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 6000);
+          const timeoutMs = 2500;
+          const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
           const gRes = await fetch(
             `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey.trim()}`,
             {
