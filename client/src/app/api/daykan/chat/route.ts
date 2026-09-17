@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 30;
 
 function isHindiQuery(text: string): boolean {
   if (!text) return false;
@@ -128,17 +129,27 @@ export async function POST(req: NextRequest) {
     }
 
     // 2. Direct Gemini Generative Language API with Human Emotion & Warmth
-    const geminiKey = (process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || '').trim();
+    const geminiKey = (
+      process.env.GEMINI_API_KEY ||
+      process.env.NEXT_PUBLIC_GEMINI_API_KEY ||
+      process.env.GOOGLE_API_KEY ||
+      process.env.GOOGLE_GEMINI_API_KEY ||
+      ''
+    ).trim();
+
     if (geminiKey && geminiKey.length > 5) {
+      // Prioritize fast, high-quota, production-stable models that never 404
       const candidateModels = [
-        'gemini-3.5-flash',
+        'gemini-flash-lite-latest',
         'gemini-3.5-flash-lite',
+        'gemini-flash-latest',
+        'gemini-3.5-flash',
         'gemini-3.6-flash',
       ];
       for (const model of candidateModels) {
         try {
           const controller = new AbortController();
-          const timeoutMs = 2500;
+          const timeoutMs = 7000;
           const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
           const gRes = await fetch(
             `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey.trim()}`,
@@ -158,11 +169,8 @@ export async function POST(req: NextRequest) {
                   }]
                 },
                 generationConfig: {
-                  temperature: 0.75,
-                  maxOutputTokens: 300,
-                  thinkingConfig: {
-                    thinkingBudget: 0,
-                  },
+                  temperature: 0.7,
+                  maxOutputTokens: 250,
                 },
                 contents: [
                   ...(body.history || []).map((h: any) => ({
@@ -199,24 +207,29 @@ export async function POST(req: NextRequest) {
     }
 
     // 3. Fallback to Express backend (/api/daykan/chat) if configured
-    const apiUrl = (process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || 'http://localhost:5000').replace(/\/$/, '');
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2000);
-      const response = await fetch(`${apiUrl}/api/daykan/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
+    const apiUrl = (process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || '').replace(/\/$/, '');
+    const isProduction = process.env.NODE_ENV === 'production';
+    const isLocalhost = !apiUrl || apiUrl.includes('localhost') || apiUrl.includes('127.0.0.1');
 
-      if (response.ok) {
-        const data = await response.json();
-        return NextResponse.json(data);
+    if (apiUrl && (!isProduction || !isLocalhost)) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2500);
+        const response = await fetch(`${apiUrl}/api/daykan/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+
+        if (response.ok) {
+          const data = await response.json();
+          return NextResponse.json(data);
+        }
+      } catch {
+        // ignore
       }
-    } catch {
-      // ignore
     }
 
     let reply = '';

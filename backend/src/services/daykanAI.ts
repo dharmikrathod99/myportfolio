@@ -270,20 +270,26 @@ export class DaykanConversationalAIService implements IDaykanAIService {
     }
 
     // 1. Primary: Direct Google Gemini API with multi-model fallback chain & function calling
-    const geminiKey = (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '').trim();
+    const geminiKey = (
+      process.env.GEMINI_API_KEY ||
+      process.env.GOOGLE_API_KEY ||
+      process.env.GOOGLE_GEMINI_API_KEY ||
+      ''
+    ).trim();
     if (geminiKey && geminiKey.length > 5) {
-      // Prioritize verified ultra-fast models (gemini-3.5-flash-lite responds in ~700ms)
+      // Prioritize verified ultra-fast models (gemini-flash-lite-latest responds in ~700ms)
       const candidateModels = [
-        'gemini-3.6-flash',
-        'gemini-3.5-flash',
-        'gemini-3.5-flash-lite',
         'gemini-flash-lite-latest',
+        'gemini-3.5-flash-lite',
+        'gemini-flash-latest',
+        'gemini-3.5-flash',
+        'gemini-3.6-flash',
       ];
 
       for (const model of candidateModels) {
         try {
           const controller = new AbortController();
-          const timeoutMs = 4000;
+          const timeoutMs = 7000;
           const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
           const geminiRes = await fetch(
             `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey.trim()}`,
