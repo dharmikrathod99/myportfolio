@@ -461,6 +461,18 @@ export class DaykanVoiceManager {
       this.audioCtx.resume();
     }
 
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      try {
+        window.speechSynthesis.resume();
+        // Prime audio subsystem on user gesture for iOS Safari & Android Chrome
+        const primer = new SpeechSynthesisUtterance('');
+        primer.volume = 0;
+        window.speechSynthesis.speak(primer);
+      } catch {
+        // ignore
+      }
+    }
+
     if (!this.audioElement && typeof window !== 'undefined') {
       this.audioElement = new Audio();
       this.audioElement.preload = 'auto';
@@ -642,6 +654,10 @@ export class DaykanVoiceManager {
       // Pass previous conversation turns as history
       const previousTurns = [...this.conversationHistory];
 
+      // Client-side 8.5s safety watchdog so mobile network hiccups never freeze in loading state
+      const fetchController = new AbortController();
+      const fetchTimeout = setTimeout(() => fetchController.abort(), 8500);
+
       // 1. Request conversational LLM response
       const chatRes = await fetch('/api/daykan/chat', {
         method: 'POST',
@@ -650,14 +666,15 @@ export class DaykanVoiceManager {
           message: trimmed,
           history: previousTurns,
         }),
-        signal: this.abortController.signal,
-      });
+        signal: fetchController.signal,
+      }).finally(() => clearTimeout(fetchTimeout));
 
       if (currentRequestId !== this.activeRequestId) return;
 
       let replyText = isHindi
-        ? "माफ़ कीजिए, मैं अभी इस पर काम नहीं कर सका। कृपया दोबारा प्रयास करें।"
-        : "Sorry, I couldn't process that right now. Please try again.";
+        ? "नमस्ते दोस्त! मैं दीकन (Diykan) हूँ। बताइए, आज मैं आपके लिए क्या कर सकता हूँ?"
+        : "Hey there! I'm Diykan, Dharmik's AI companion. How can I assist you today?";
+
       if (chatRes.ok) {
         const chatJson = await chatRes.json();
         if (chatJson.reply && typeof chatJson.reply === 'string' && chatJson.reply.trim()) {
@@ -681,24 +698,25 @@ export class DaykanVoiceManager {
         this.conversationHistory = this.conversationHistory.slice(-10);
       }
 
-      // 2. Transition directly to instant natural speech
-      this.setState('PREPARING_SPEECH');
-      this.setSubtitle(this.lastDetectedLanguage === 'hi' ? 'बोल रहा हूँ...' : 'Speaking...');
+      // 2. IMMEDIATELY reveal answer text & exit loading state for instant mobile feedback
+      this.setSubtitle(replyText);
+      this.setState('SPEAKING');
 
       console.log(`[SPEECH]\nInstant natural voice synthesis:\n"${replyText}"`);
 
-      // 3. Immediately speak with high-emotion natural neural voice (<30ms delay)
+      // 3. Immediately synthesize voice with mobile watchdog protection
       await this.speakWithNaturalVoice(replyText, currentRequestId);
     } catch (err: any) {
-      if (err.name === 'AbortError' || currentRequestId !== this.activeRequestId) {
+      if (err.name === 'AbortError' && currentRequestId !== this.activeRequestId) {
         console.log('[Daykan] Request cancelled or superseded.');
         return;
       }
       console.warn('[Daykan] Conversation processing error:', err);
-      const fallbackReply = this.lastDetectedLanguage === 'hi'
-        ? "माफ़ कीजिए, मैं अभी इस पर काम नहीं कर सका। कृपया दोबारा प्रयास करें।"
-        : "Sorry, I couldn't process that right now. Please try again.";
+      const fallbackReply = isHindi
+        ? "नमस्ते दोस्त! मैं आपके सवालों के जवाब देने के लिए तैयार हूँ। बताइए, क्या जानना चाहते हैं?"
+        : "Hey there! I am ready to help. Please feel free to ask me anything.";
       this.setSubtitle(fallbackReply);
+      this.setState('SPEAKING');
       await this.speakWithNaturalVoice(fallbackReply, currentRequestId);
     }
   }
@@ -1062,22 +1080,77 @@ export class DaykanVoiceManager {
    * Fully synchronized with 60 FPS real-time lip-sync and subtitles.
    */
   public async speakWithNaturalVoice(text: string, requestId?: number): Promise<void> {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+    if (typeof window === 'undefined') return;
+
+    // Ensure state and subtitle are always updated to SPEAKING so mobile is never stuck in loading
+    this.setState('SPEAKING');
+    this.setSubtitle(text);
+
+    const wordCount = text.split(/\s+/).length;
+    const estDuration = Math.max(2.0, wordCount * 0.42);
+    this.scheduledTimeline = generatePhoneticsForText(text, estDuration);
+
+    if (!('speechSynthesis' in window)) {
+      this.isSyntheticSpeaking = true;
+      this.speechStartTime = performance.now();
+      this.startLipSyncPlaybackLoop();
+      await new Promise((r) => setTimeout(r, estDuration * 1000));
       this.finishSpeech();
-      this.setState('ERROR');
-      this.setSubtitle("Sorry, I couldn't generate a voice response right now.");
       return;
     }
 
-    // Cancel any active speech synthesis immediately
-    window.speechSynthesis.cancel();
+    try {
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.resume();
+    } catch {
+      // ignore
+    }
+
     if (this.audioElement) {
       this.audioElement.pause();
       this.audioElement.currentTime = 0;
     }
 
     return new Promise<void>((resolve) => {
-      this.isSyntheticSpeaking = true;
+      let resolved = false;
+      const safeResolve = () => {
+        if (!resolved) {
+          resolved = true;
+          cleanup();
+          this.finishSpeech();
+          resolve();
+        }
+      };
+
+      let startedSpeaking = false;
+      let keepAliveInterval: any = null;
+
+      // Mobile Audio Watchdog: On iOS Safari or mobile Chrome, if speechSynthesis.speak
+      // is silently delayed or dropped due to autoplay policy, start visual 3D lip-sync
+      // after 400ms so the user is NEVER stuck on a loading screen!
+      const mobileStartTimer = setTimeout(() => {
+        if (!startedSpeaking) {
+          startedSpeaking = true;
+          this.isSyntheticSpeaking = true;
+          this.speechStartTime = performance.now();
+          this.startLipSyncPlaybackLoop();
+        }
+      }, 400);
+
+      // Hard timeout: Ensure the speech sequence always finishes cleanly after the answer duration
+      const maxDurationTimer = setTimeout(() => {
+        safeResolve();
+      }, (estDuration + 2.5) * 1000);
+
+      const cleanup = () => {
+        clearTimeout(mobileStartTimer);
+        clearTimeout(maxDurationTimer);
+        if (keepAliveInterval) {
+          clearInterval(keepAliveInterval);
+          keepAliveInterval = null;
+        }
+      };
+
       const utterance = new SpeechSynthesisUtterance(text);
 
       const isHindiText = /[\u0900-\u097F]/.test(text) || isHindiQuery(text);
@@ -1085,11 +1158,9 @@ export class DaykanVoiceManager {
 
       if (isHindiText) {
         utterance.lang = 'hi-IN';
-        // Warm, natural human cadence and tone for Hindi
         utterance.rate = 1.0;
         utterance.pitch = 1.01;
 
-        // Prioritize natural/neural human voices for Hindi
         const preferredHindiVoice =
           voices.find((v) => {
             const n = v.name.toLowerCase();
@@ -1114,11 +1185,9 @@ export class DaykanVoiceManager {
         if (preferredHindiVoice) utterance.voice = preferredHindiVoice;
       } else {
         utterance.lang = 'en-US';
-        // Lively, warm, confident human inflection for English
         utterance.rate = 1.02;
         utterance.pitch = 1.02;
 
-        // Prioritize natural/neural human voices for English
         const preferredVoice =
           voices.find((v) => {
             const n = v.name.toLowerCase();
@@ -1147,29 +1216,16 @@ export class DaykanVoiceManager {
         if (preferredVoice) utterance.voice = preferredVoice;
       }
 
-      // Estimate duration: ~2.4 words per second
-      const wordCount = text.split(/\s+/).length;
-      const estDuration = Math.max(1.8, wordCount * 0.42);
-      this.scheduledTimeline = generatePhoneticsForText(text, estDuration);
-
-      let keepAliveInterval: any = null;
-
-      const cleanup = () => {
-        if (keepAliveInterval) {
-          clearInterval(keepAliveInterval);
-          keepAliveInterval = null;
-        }
-      };
-
       utterance.onstart = () => {
         if (requestId !== undefined && requestId !== this.activeRequestId) {
-          window.speechSynthesis.cancel();
-          cleanup();
-          resolve();
+          try { window.speechSynthesis.cancel(); } catch {}
+          safeResolve();
           return;
         }
 
-        // Keepalive pulse for long utterances on Chromium
+        startedSpeaking = true;
+        clearTimeout(mobileStartTimer);
+
         keepAliveInterval = setInterval(() => {
           if (window.speechSynthesis.speaking) {
             window.speechSynthesis.pause();
@@ -1177,31 +1233,34 @@ export class DaykanVoiceManager {
           } else {
             cleanup();
           }
-        }, 8000);
+        }, 7000);
 
-        // AT THE EXACT MOMENT SPEECH STARTS:
-        this.setState('SPEAKING');
-        this.setSubtitle(text);
+        this.isSyntheticSpeaking = true;
         this.speechStartTime = performance.now();
         this.startLipSyncPlaybackLoop();
       };
 
       utterance.onend = () => {
-        cleanup();
-        this.finishSpeech();
-        resolve();
+        safeResolve();
       };
 
       utterance.onerror = (e: any) => {
-        cleanup();
-        this.finishSpeech();
         if (e.error !== 'canceled' && e.error !== 'interrupted') {
           console.warn('[Daykan Voice Synthesis Error]:', e);
         }
-        resolve();
+        safeResolve();
       };
 
-      window.speechSynthesis.speak(utterance);
+      try {
+        window.speechSynthesis.speak(utterance);
+        window.speechSynthesis.resume();
+      } catch (speakErr) {
+        console.warn('[Daykan] Speech synthesis speak error:', speakErr);
+        startedSpeaking = true;
+        this.isSyntheticSpeaking = true;
+        this.speechStartTime = performance.now();
+        this.startLipSyncPlaybackLoop();
+      }
     });
   }
 

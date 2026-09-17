@@ -174,7 +174,7 @@ export async function POST(req: NextRequest) {
       for (const model of candidateModels) {
         try {
           const controller = new AbortController();
-          const timeoutMs = 7000;
+          const timeoutMs = 4500;
           const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
           const gRes = await fetch(
             `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey.trim()}`,
@@ -192,6 +192,7 @@ export async function POST(req: NextRequest) {
                   maxOutputTokens: 250,
                 },
                 contents: [
+
                   ...(body.history || []).map((h: any) => ({
                     role: h.role === 'assistant' ? 'model' : 'user',
                     parts: [{ text: h.content }],
