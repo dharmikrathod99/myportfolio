@@ -3,10 +3,10 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import HeroSection from '@/components/sections/HeroSection';
 
-const MeasuredSection = dynamic(() => import('@/components/sections/MeasuredSection'), {
+const SkillsSection = dynamic(() => import('@/components/sections/SkillsSection'), {
   ssr: false,
   loading: () => (
-    <div className="w-full h-[75vh] sm:h-[85vh] lg:h-screen min-h-[480px] bg-[#0a0a0a] flex items-center justify-center">
+    <div className="w-full h-[600px] bg-[#050811] flex items-center justify-center">
       <div className="w-8 h-8 rounded-full border-2 border-accent/40 border-t-accent animate-spin" />
     </div>
   ),
@@ -136,8 +136,8 @@ export default function Home() {
       {/* 1. Main Hero Section */}
       <HeroSection />
 
-      {/* 2. Measured Product Showcase Section (Fullscreen 100vh) */}
-      <MeasuredSection />
+      {/* 2. Skills & Experience Section */}
+      <SkillsSection />
 
       {/* 3. Featured Video Projects Showcase - Directly Attached with Zero Gap */}
       <ProjectsCarouselSection />

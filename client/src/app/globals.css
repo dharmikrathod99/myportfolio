@@ -75,18 +75,21 @@ html.light [class*="bg-dark-card"] {
 }
 
 /* Text Colors in Luxury Light Theme */
-html:not(.dark) .text-white:not(.keep-white):not(.dark-terminal *):not(#measured-experience *):not(.depth-card *):not(.depth-card):not(#projects-showcase *):not(#projects-showcase),
-html.light .text-white:not(.keep-white):not(.dark-terminal *):not(#measured-experience *):not(.depth-card *):not(.depth-card):not(#projects-showcase *):not(#projects-showcase) {
+html:not(.dark) .text-white:not(.keep-white):not(.dark-terminal *):not(#measured-experience *):not(.depth-card *):not(.depth-card):not(#projects-showcase *):not(#projects-showcase):not(#skills *):not(#skills),
+html.light .text-white:not(.keep-white):not(.dark-terminal *):not(#measured-experience *):not(.depth-card *):not(.depth-card):not(#projects-showcase *):not(#projects-showcase):not(#skills *):not(#skills) {
   color: #0A0A0A !important;
 }
 
-/* Force pure white text inside dark video showcase in any theme */
+/* Force pure white text inside dark video showcase and skills in any theme */
 #projects-showcase .text-white,
 #projects-showcase h2,
 #projects-showcase h3,
 #projects-showcase p,
-#projects-showcase span {
-  color: #FFFFFF;
+#projects-showcase span,
+#skills .text-white,
+#skills h2,
+#skills .keep-white {
+  color: #FFFFFF !important;
 }
 
 html:not(.dark) .text-customText-primary,
