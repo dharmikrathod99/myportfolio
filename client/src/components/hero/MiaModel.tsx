@@ -366,7 +366,7 @@ const Model = React.memo(function Model({
   hairstyle?: HairstyleId;
   onReady?: () => void;
 }) {
-  const { size } = useThree();
+  const { size, camera, gl } = useThree();
   const group = useRef<THREE.Group>(null);
   const bonesRef = useRef<CharacterFaceBones>({});
   const baseRotationsRef = useRef<BaseBoneRotations>({});
@@ -462,42 +462,20 @@ const Model = React.memo(function Model({
     blinkProgress: 0,
   });
 
-  // Unified pointer, touch & scroll tracking: works across mobile, touchscreens, mouse & trackpads
+  // Unified pointer, touch & scroll tracking with mobile gesture intent detection
   useEffect(() => {
+    const canvas = gl?.domElement;
+
     const updateCoords = (clientX: number, clientY: number) => {
       const x = (clientX / window.innerWidth) * 2 - 1;
       const y = -((clientY / window.innerHeight) * 2 - 1);
       pointerTargetRef.current = { x, y, isHovered: true };
     };
 
-    const handlePointerMove = (e: PointerEvent) => {
-      if (e.pointerType === 'touch') return;
+    // Desktop pointer tracking (mouse only) - preserves 100% desktop mouse experience
+    const handlePointerMoveDesktop = (e: PointerEvent) => {
+      if (e.pointerType !== 'mouse') return;
       updateCoords(e.clientX, e.clientY);
-    };
-
-    const handlePointerDown = (e: PointerEvent) => {
-      if (e.pointerType === 'touch') return;
-      updateCoords(e.clientX, e.clientY);
-    };
-
-    const handlePointerUp = () => {
-      pointerTargetRef.current = { x: 0, y: 0, isHovered: false };
-    };
-
-    const handleTouchStart = (e: TouchEvent) => {
-      if (e.touches && e.touches.length > 0) {
-        updateCoords(e.touches[0].clientX, e.touches[0].clientY);
-      }
-    };
-
-    const handleTouchMove = (e: TouchEvent) => {
-      if (e.touches && e.touches.length > 0) {
-        updateCoords(e.touches[0].clientX, e.touches[0].clientY);
-      }
-    };
-
-    const handleTouchEnd = () => {
-      pointerTargetRef.current = { x: 0, y: 0, isHovered: false };
     };
 
     const handlePointerLeave = () => {
@@ -506,6 +484,142 @@ const Model = React.memo(function Model({
 
     const handleBlur = () => {
       pointerTargetRef.current = { x: 0, y: 0, isHovered: false };
+    };
+
+    // Gesture state for mobile touch / stylus devices
+    const touchGestureState = {
+      pointerId: null as number | null,
+      startX: 0,
+      startY: 0,
+      startTime: 0,
+      intent: 'undecided' as 'undecided' | 'scroll' | 'model',
+      isOverModel: false,
+      captured: false,
+    };
+
+    // Touch pointerdown: check whether touch starts directly on Daykan or empty hero space
+    const handlePointerDown = (e: PointerEvent) => {
+      if (e.pointerType === 'mouse') {
+        updateCoords(e.clientX, e.clientY);
+        return;
+      }
+
+      // Check if touch is directly on the Daykan 3D model
+      let isOverModel = false;
+      if (canvas && camera && group.current) {
+        const rect = canvas.getBoundingClientRect();
+        const ndcX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        const ndcY = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+        tempNdcRef.current.set(ndcX, ndcY);
+        raycasterRef.current.setFromCamera(tempNdcRef.current, camera);
+        const hits = raycasterRef.current.intersectObjects(group.current.children, true);
+        const hasMeshHit = hits.some(
+          (h) => h.object.visible && !(h.object as any).isPoints
+        );
+
+        // Daykan interactive bust zone on mobile (centered head & chest)
+        const inBustZone = Math.abs(ndcX) < 0.42 && ndcY > -0.65 && ndcY < 0.82;
+        isOverModel = hasMeshHit || inBustZone;
+      }
+
+      touchGestureState.pointerId = e.pointerId;
+      touchGestureState.startX = e.clientX;
+      touchGestureState.startY = e.clientY;
+      touchGestureState.startTime = performance.now();
+      touchGestureState.intent = isOverModel ? 'undecided' : 'scroll';
+      touchGestureState.isOverModel = isOverModel;
+      touchGestureState.captured = false;
+
+      // Note: If touch starts on empty Hero space (isOverModel === false),
+      // intent is immediately 'scroll'. Browser will handle native page scrolling without touching model.
+    };
+
+    // Touch pointermove: evaluate gesture intent before deciding whether to scroll or move Daykan
+    const handlePointerMoveTouch = (e: PointerEvent) => {
+      if (e.pointerType === 'mouse') return;
+      if (touchGestureState.pointerId !== e.pointerId) return;
+
+      const deltaX = e.clientX - touchGestureState.startX;
+      const deltaY = e.clientY - touchGestureState.startY;
+      const absX = Math.abs(deltaX);
+      const absY = Math.abs(deltaY);
+      const dist = Math.hypot(deltaX, deltaY);
+      const elapsed = performance.now() - touchGestureState.startTime;
+
+      if (touchGestureState.intent === 'undecided') {
+        const GESTURE_THRESHOLD = 10; // px
+        if (dist < GESTURE_THRESHOLD) {
+          // Check for deliberate press/hold on Daykan before dragging (> 220ms)
+          if (elapsed > 220 && touchGestureState.isOverModel) {
+            touchGestureState.intent = 'model';
+          } else {
+            return; // Still undecided: do not move model, let browser determine scroll
+          }
+        } else {
+          // Movement threshold crossed: evaluate gesture direction
+          if (absY > absX * 1.15 && elapsed < 260) {
+            // Predominantly vertical swipe: normal page scroll gesture!
+            touchGestureState.intent = 'scroll';
+            return;
+          } else if (touchGestureState.isOverModel) {
+            // Horizontal or intentional manipulation on model
+            touchGestureState.intent = 'model';
+          } else {
+            touchGestureState.intent = 'scroll';
+            return;
+          }
+        }
+      }
+
+      if (touchGestureState.intent === 'scroll') {
+        // Native page scroll: Daykan does not move!
+        return;
+      }
+
+      if (touchGestureState.intent === 'model') {
+        // User intentionally interacting with model: capture pointer and update Daykan
+        if (!touchGestureState.captured && canvas) {
+          try {
+            canvas.setPointerCapture(e.pointerId);
+            touchGestureState.captured = true;
+          } catch {
+            // Pointer capture fallback
+          }
+        }
+
+        updateCoords(e.clientX, e.clientY);
+        if (e.cancelable) {
+          e.preventDefault();
+        }
+      }
+    };
+
+    // Pointer up or cancel: release capture and cleanly reset gesture state
+    const handlePointerUpOrCancel = (e: PointerEvent) => {
+      if (e.pointerType === 'mouse') {
+        pointerTargetRef.current = { x: 0, y: 0, isHovered: false };
+        return;
+      }
+
+      if (touchGestureState.pointerId === e.pointerId) {
+        if (touchGestureState.captured && canvas) {
+          try {
+            canvas.releasePointerCapture(e.pointerId);
+          } catch {
+            // Pointer release fallback
+          }
+        }
+
+        if (touchGestureState.intent === 'model') {
+          pointerTargetRef.current = { x: 0, y: 0, isHovered: false };
+        }
+
+        touchGestureState.pointerId = null;
+        touchGestureState.intent = 'undecided';
+        touchGestureState.isOverModel = false;
+        touchGestureState.captured = false;
+      }
     };
 
     // Smooth subtle gaze adjustment when page scrolls down on both mobile and desktop
@@ -520,32 +634,30 @@ const Model = React.memo(function Model({
       }
     };
 
-    window.addEventListener('pointermove', handlePointerMove, { passive: true });
-    window.addEventListener('pointerdown', handlePointerDown, { passive: true });
-    window.addEventListener('pointerup', handlePointerUp, { passive: true });
-    window.addEventListener('pointercancel', handlePointerUp, { passive: true });
-    window.addEventListener('touchstart', handleTouchStart, { passive: true });
-    window.addEventListener('touchmove', handleTouchMove, { passive: true });
-    window.addEventListener('touchend', handleTouchEnd, { passive: true });
-    window.addEventListener('touchcancel', handleTouchEnd, { passive: true });
+    window.addEventListener('pointermove', handlePointerMoveDesktop, { passive: true });
+    window.addEventListener('pointermove', handlePointerMoveTouch, { passive: false });
+    if (canvas) {
+      canvas.addEventListener('pointerdown', handlePointerDown, { passive: true });
+    }
+    window.addEventListener('pointerup', handlePointerUpOrCancel, { passive: true });
+    window.addEventListener('pointercancel', handlePointerUpOrCancel, { passive: true });
     window.addEventListener('scroll', handleScroll, { passive: true });
     document.addEventListener('mouseleave', handlePointerLeave);
     window.addEventListener('blur', handleBlur);
 
     return () => {
-      window.removeEventListener('pointermove', handlePointerMove);
-      window.removeEventListener('pointerdown', handlePointerDown);
-      window.removeEventListener('pointerup', handlePointerUp);
-      window.removeEventListener('pointercancel', handlePointerUp);
-      window.removeEventListener('touchstart', handleTouchStart);
-      window.removeEventListener('touchmove', handleTouchMove);
-      window.removeEventListener('touchend', handleTouchEnd);
-      window.removeEventListener('touchcancel', handleTouchEnd);
+      window.removeEventListener('pointermove', handlePointerMoveDesktop);
+      window.removeEventListener('pointermove', handlePointerMoveTouch);
+      if (canvas) {
+        canvas.removeEventListener('pointerdown', handlePointerDown);
+      }
+      window.removeEventListener('pointerup', handlePointerUpOrCancel);
+      window.removeEventListener('pointercancel', handlePointerUpOrCancel);
       window.removeEventListener('scroll', handleScroll);
       document.removeEventListener('mouseleave', handlePointerLeave);
       window.removeEventListener('blur', handleBlur);
     };
-  }, []);
+  }, [camera, gl]);
 
   // Load GLTF model, custom head beauty diffuse map, smoothed normal map, neck emissive map, and eye maps
   const { scene, animations } = useGLTF('/models/mia.glb', true, true, (loader) => {
