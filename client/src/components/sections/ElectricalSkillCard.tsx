@@ -147,7 +147,8 @@ export default function ElectricalSkillCard({ name, icon: IconComponent }: Elect
 
       {/* ================= SKILL NAME ================= */}
       <span
-        className={`relative z-10 text-[10px] sm:text-[11px] font-sans font-medium transition-colors duration-200 truncate max-w-full ${
+        title={name}
+        className={`relative z-10 text-[9.5px] sm:text-[10px] lg:text-[11px] font-sans font-medium transition-colors duration-200 text-center leading-[1.2] line-clamp-2 max-w-full px-0.5 ${
           isHovered ? 'text-white font-bold drop-shadow-[0_0_8px_rgba(0,240,255,0.7)]' : 'text-white/90'
         }`}
       >

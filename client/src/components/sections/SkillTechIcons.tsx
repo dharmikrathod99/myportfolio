@@ -320,3 +320,112 @@ export function DockerIcon({ className = 'w-6 h-6', size = 26, ...props }: TechI
     </svg>
   );
 }
+
+// 19. 3D Website Design Icon (Glowing isometric 3D geometry / wireframe prism)
+export function ThreeDWebsiteDesignIcon({ className = 'w-6 h-6', size = 26, ...props }: TechIconProps) {
+  return (
+    <svg viewBox="0 0 64 64" width={size} height={size} className={className} fill="none" {...props}>
+      <defs>
+        <linearGradient id="cubeTop" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#38BDF8" />
+          <stop offset="100%" stopColor="#00F0FF" />
+        </linearGradient>
+        <linearGradient id="cubeLeft" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#0284C7" />
+          <stop offset="100%" stopColor="#0369A1" />
+        </linearGradient>
+        <linearGradient id="cubeRight" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#6366F1" />
+          <stop offset="100%" stopColor="#4338CA" />
+        </linearGradient>
+      </defs>
+      {/* 3D Isometric Cube / Prism */}
+      <polygon points="32,7 55,20 32,33 9,20" fill="url(#cubeTop)" fillOpacity="0.9" stroke="#00F0FF" strokeWidth="1.5" strokeLinejoin="round" />
+      <polygon points="9,20 32,33 32,57 9,44" fill="url(#cubeLeft)" fillOpacity="0.9" stroke="#38BDF8" strokeWidth="1.5" strokeLinejoin="round" />
+      <polygon points="32,33 55,20 55,44 32,57" fill="url(#cubeRight)" fillOpacity="0.9" stroke="#818CF8" strokeWidth="1.5" strokeLinejoin="round" />
+      {/* Dimension & Wireframe Lines */}
+      <line x1="32" y1="33" x2="32" y2="14" stroke="#FFFFFF" strokeWidth="1.2" strokeDasharray="2 2" opacity="0.75" />
+      <line x1="32" y1="33" x2="47" y2="41" stroke="#FFFFFF" strokeWidth="1.2" strokeDasharray="2 2" opacity="0.65" />
+      <line x1="32" y1="33" x2="17" y2="41" stroke="#FFFFFF" strokeWidth="1.2" strokeDasharray="2 2" opacity="0.65" />
+      {/* Subtle Orbit Ring */}
+      <ellipse cx="32" cy="32" rx="27" ry="11" stroke="#00F0FF" strokeWidth="1.2" strokeDasharray="3 3" opacity="0.45" transform="rotate(-15 32 32)" />
+      {/* Vertex Nodes */}
+      <circle cx="32" cy="7" r="2.2" fill="#FFFFFF" />
+      <circle cx="55" cy="20" r="2.2" fill="#00F0FF" />
+      <circle cx="9" cy="20" r="2.2" fill="#00F0FF" />
+      <circle cx="32" cy="33" r="2.5" fill="#FFFFFF" />
+      <circle cx="32" cy="57" r="2.2" fill="#818CF8" />
+      <circle cx="55" cy="44" r="2.2" fill="#818CF8" />
+      <circle cx="9" cy="44" r="2.2" fill="#38BDF8" />
+    </svg>
+  );
+}
+
+// 20. Blender 3D Suite Icon (Official Blender Orange, Blue & White Center)
+export function BlenderIcon({ className = 'w-6 h-6', size = 26, ...props }: TechIconProps) {
+  return (
+    <svg viewBox="0 0 64 64" width={size} height={size} className={className} fill="none" {...props}>
+      {/* Blender 3 Radiating Arms */}
+      <line x1="35" y1="37" x2="50" y2="12" stroke="#EA7600" strokeWidth="8.5" strokeLinecap="round" />
+      <line x1="35" y1="37" x2="11" y2="23" stroke="#EA7600" strokeWidth="8.5" strokeLinecap="round" />
+      <line x1="35" y1="37" x2="16" y2="52" stroke="#EA7600" strokeWidth="8.5" strokeLinecap="round" />
+      {/* Outer Orange Body */}
+      <circle cx="35" cy="37" r="16.5" fill="#EA7600" />
+      {/* Inner Royal Blue Eye */}
+      <circle cx="35" cy="37" r="10.5" fill="#22578A" />
+      {/* Center White Dot */}
+      <circle cx="35" cy="37" r="4.2" fill="#FFFFFF" />
+    </svg>
+  );
+}
+
+// 21. SEO Optimized Website Icon (Search Engine Optimization, Trending Growth & Web Window)
+export function SeoOptimizedIcon({ className = 'w-6 h-6', size = 26, ...props }: TechIconProps) {
+  return (
+    <svg viewBox="0 0 64 64" width={size} height={size} className={className} fill="none" {...props}>
+      <defs>
+        <linearGradient id="seoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#00F0FF" />
+          <stop offset="100%" stopColor="#10B981" />
+        </linearGradient>
+      </defs>
+      {/* Browser Window Frame */}
+      <rect x="6" y="8" width="52" height="48" rx="8" fill="#071324" stroke="#00F0FF" strokeWidth="2.5" />
+      {/* Window Title Bar */}
+      <line x1="6" y1="20" x2="58" y2="20" stroke="#1E293B" strokeWidth="2" />
+      <circle cx="13" cy="14" r="2" fill="#EF4444" />
+      <circle cx="19" cy="14" r="2" fill="#F59E0B" />
+      <circle cx="25" cy="14" r="2" fill="#10B981" />
+      {/* URL search pill */}
+      <rect x="31" y="11" width="22" height="6" rx="3" fill="#0B1E38" stroke="#38BDF8" strokeWidth="1" />
+      {/* SEO Upward Rank Trajectory Line */}
+      <path
+        d="M13 46 L23 37 L31 42 L47 25"
+        stroke="url(#seoGrad)"
+        strokeWidth="3.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      {/* Arrowhead on trajectory */}
+      <path d="M41 25 H47 V31" stroke="#10B981" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+      {/* Search Magnifying Lens */}
+      <circle cx="27" cy="33" r="7.5" stroke="#38BDF8" strokeWidth="2.5" fill="#081A36" fillOpacity="0.85" />
+      <line x1="32.5" y1="38.5" x2="39" y2="45" stroke="#38BDF8" strokeWidth="3" strokeLinecap="round" />
+      {/* Glowing SEO Pill Badge */}
+      <rect x="11" y="47" width="24" height="7" rx="2" fill="#00F0FF" fillOpacity="0.2" stroke="#00F0FF" strokeWidth="0.8" />
+      <text
+        x="23"
+        y="52.2"
+        textAnchor="middle"
+        dominantBaseline="middle"
+        fill="#00F0FF"
+        fontSize="5.5"
+        fontWeight="bold"
+        fontFamily="system-ui, -apple-system, sans-serif"
+        letterSpacing="0.6"
+      >
+        SEO
+      </text>
+    </svg>
+  );
+}

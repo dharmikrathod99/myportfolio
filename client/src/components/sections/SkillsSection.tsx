@@ -14,14 +14,14 @@ import {
   TailwindIcon,
   BootstrapIcon,
   PythonIcon,
-  FigmaIcon,
+  ThreeDWebsiteDesignIcon,
   FramerMotionIcon,
   ApiIntegrationIcon,
   AiAutomationIcon,
   GitGithubIcon,
-  DataAnalysisIcon,
+  BlenderIcon,
   FirebaseIcon,
-  DockerIcon,
+  SeoOptimizedIcon,
 } from './SkillTechIcons';
 
 export const SKILLS_LIST = [
@@ -35,14 +35,14 @@ export const SKILLS_LIST = [
   { name: 'Tailwind CSS', icon: TailwindIcon },
   { name: 'Bootstrap', icon: BootstrapIcon },
   { name: 'Python', icon: PythonIcon },
-  { name: 'Figma', icon: FigmaIcon },
+  { name: '3D Website Design', icon: ThreeDWebsiteDesignIcon },
   { name: 'Framer Motion', icon: FramerMotionIcon },
   { name: 'API Integration', icon: ApiIntegrationIcon },
   { name: 'AI Automation', icon: AiAutomationIcon },
   { name: 'Git & GitHub', icon: GitGithubIcon },
-  { name: 'Data Analysis', icon: DataAnalysisIcon },
+  { name: 'Blender', icon: BlenderIcon },
   { name: 'Firebase', icon: FirebaseIcon },
-  { name: 'Docker', icon: DockerIcon },
+  { name: 'SEO Optimized Website', icon: SeoOptimizedIcon },
 ];
 
 export default function SkillsSection() {
