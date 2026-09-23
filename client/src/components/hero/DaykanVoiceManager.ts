@@ -301,6 +301,17 @@ export class DaykanVoiceManager {
   private audioSourceNode: MediaElementAudioSourceNode | null = null;
 
   private recognition: any = null;
+  private micStream: MediaStream | null = null;
+  private micSourceNode: MediaStreamAudioSourceNode | null = null;
+  private micAnalyser: AnalyserNode | null = null;
+  private micDataArray: Uint8Array | null = null;
+  private mediaRecorder: MediaRecorder | null = null;
+  private recordedAudioChunks: Blob[] = [];
+  private accumulatedTranscript: string = '';
+  private silenceTimer: any = null;
+  private listeningTimeoutTimer: any = null;
+  private isExplicitlyStopping: boolean = false;
+  private hasDetectedSpeechInSession: boolean = false;
   private isSyntheticSpeaking: boolean = false;
   private currentObjectUrl: string | null = null;
   private abortController: AbortController | null = null;
@@ -503,122 +514,378 @@ export class DaykanVoiceManager {
   }
 
   /**
+   * Resets silence debounce timer.
+   * If speech was detected, after 1.6s of silence, automatically process the question.
+   */
+  private resetSilenceTimer() {
+    if (this.silenceTimer) {
+      clearTimeout(this.silenceTimer);
+      this.silenceTimer = null;
+    }
+    this.silenceTimer = setTimeout(() => {
+      if (this.state === 'LISTENING') {
+        const query = (this.accumulatedTranscript || '').trim();
+        if (query) {
+          console.log('[Daykan STT] Silence debounce threshold reached, processing query:', query);
+          this.stopListening(true);
+        }
+      }
+    }, 1300);
+  }
+
+  /**
+   * Resets overall session timeout (e.g. 25 seconds).
+   * Prevents microphone from staying on indefinitely if no speech is detected.
+   */
+  private resetListeningTimeout() {
+    if (this.listeningTimeoutTimer) {
+      clearTimeout(this.listeningTimeoutTimer);
+      this.listeningTimeoutTimer = null;
+    }
+    this.listeningTimeoutTimer = setTimeout(() => {
+      if (this.state === 'LISTENING') {
+        const query = (this.accumulatedTranscript || '').trim();
+        if (query) {
+          this.stopListening(true);
+        } else {
+          console.log('[Daykan STT] Session timeout with no speech detected.');
+          this.setSubtitle('No speech detected. Click mic to speak again.');
+          this.stopListening(false);
+        }
+      }
+    }, 25000);
+  }
+
+  /**
    * Starts user voice input with speech recognition and microphone gating
    */
   public async startListening(): Promise<boolean> {
     if (typeof window === 'undefined') return false;
 
     this.cancelSpeech();
-    this.stopListening();
+    this.stopListening(false);
 
     this.errorMessage = '';
     this.initAudio();
+    this.isExplicitlyStopping = false;
+    this.accumulatedTranscript = '';
+    this.hasDetectedSpeechInSession = false;
     this.setState('LISTENING');
-    if (!this.displayedSubtitle) {
-      if (this.languageMode === 'hi' || (this.languageMode === 'auto' && this.lastDetectedLanguage === 'hi')) {
-        this.setSubtitle('हिंदी में बोलें... (Listening in Hindi)');
-      } else {
-        this.setSubtitle('Listening to your voice... Speak now');
-      }
+
+    if (this.languageMode === 'hi' || (this.languageMode === 'auto' && this.lastDetectedLanguage === 'hi')) {
+      this.setSubtitle('हिंदी में बोलें... (Listening in Hindi)');
+    } else {
+      this.setSubtitle('Listening to your voice... Speak now');
     }
 
+    // 1. Explicitly request microphone permission to prompt browser if not yet granted
     try {
-      this.startAudioAnalysisLoop();
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        this.micStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
+        });
 
-      const SpeechRecClass =
-        (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        // Connect mic stream to analyser for real visual waveform
+        if (this.audioCtx && this.micStream) {
+          try {
+            if (this.audioCtx.state === 'suspended') {
+              await this.audioCtx.resume();
+            }
+            this.micAnalyser = this.audioCtx.createAnalyser();
+            this.micAnalyser.fftSize = 256;
+            this.micAnalyser.smoothingTimeConstant = 0.5;
+            this.micDataArray = new Uint8Array(this.micAnalyser.frequencyBinCount);
+            this.micSourceNode = this.audioCtx.createMediaStreamSource(this.micStream);
+            this.micSourceNode.connect(this.micAnalyser);
+          } catch (audioErr) {
+            console.warn('[Daykan] Could not connect mic stream to analyser:', audioErr);
+          }
+        }
+      }
+    } catch (permErr: any) {
+      console.warn('[Daykan] Microphone permission error:', permErr);
+      this.stopListening(false);
+      this.errorMessage = 'Microphone permission blocked. Please allow mic access in your browser.';
+      this.setSubtitle('Microphone permission blocked. Please allow mic access in browser settings.');
+      this.setState('ERROR');
+      return false;
+    }
 
-      if (!SpeechRecClass) {
-        console.warn('SpeechRecognition API unavailable in browser.');
-        this.errorMessage = 'Speech recognition is not supported in this browser. Please use Chrome or Edge.';
-        this.setSubtitle('Speech recognition is not supported in this browser. Please use Chrome or Edge.');
-        this.stopListening();
-        this.setState('IDLE');
-        return false;
+    this.startAudioAnalysisLoop();
+    this.resetListeningTimeout();
+
+    // 2. Check for native SpeechRecognition
+    const SpeechRecClass =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (SpeechRecClass) {
+      return this.startNativeSpeechRecognition(SpeechRecClass);
+    } else {
+      console.log('[Daykan] Native SpeechRecognition not supported, falling back to MediaRecorder');
+      return this.startMediaRecorderFallback();
+    }
+  }
+
+  private startNativeSpeechRecognition(SpeechRecClass: any): boolean {
+    try {
+      if (this.recognition) {
+        try {
+          this.recognition.onresult = null;
+          this.recognition.onerror = null;
+          this.recognition.onend = null;
+          this.recognition.abort();
+        } catch {}
+        this.recognition = null;
       }
 
       this.recognition = new SpeechRecClass();
+      const navLang = typeof navigator !== 'undefined' && navigator.language ? navigator.language : 'en-US';
       if (this.languageMode === 'hi') {
         this.recognition.lang = 'hi-IN';
       } else if (this.languageMode === 'en') {
-        this.recognition.lang = 'en-IN';
+        this.recognition.lang = navLang.toLowerCase().startsWith('en') ? navLang : 'en-US';
       } else {
-        // In auto mode, use 'en-IN' to ensure clean transcription of both English and Romanized Hindi phrases
-        this.recognition.lang = 'en-IN';
+        this.recognition.lang = navLang.toLowerCase().startsWith('hi') ? 'hi-IN' : (navLang.toLowerCase().startsWith('en') ? navLang : 'en-US');
       }
-      this.recognition.interimResults = false;
-      this.recognition.maxAlternatives = 1;
-      this.recognition.continuous = false;
 
-      let recognized = false;
+      // CRITICAL: continuous = true keeps the engine alive and prevents immediate cutoff
+      this.recognition.continuous = true;
+      this.recognition.interimResults = true;
+      this.recognition.maxAlternatives = 1;
+
+      this.recognition.onstart = () => {
+        console.log('[Daykan STT] Native speech recognition active.');
+      };
 
       this.recognition.onresult = (event: any) => {
-        recognized = true;
-        const transcript =
-          event.results && event.results[0] && event.results[0][0]
-            ? event.results[0][0].transcript
-            : '';
+        let fullTranscript = '';
 
-        console.log(`[STT]\nUser transcript:\n"${transcript}"`);
-        this.stopListening();
+        for (let i = 0; i < event.results.length; ++i) {
+          const trans = event.results[i][0]?.transcript || '';
+          fullTranscript += trans;
+        }
 
-        const cleanTranscript = (transcript || '').trim();
-        if (cleanTranscript) {
-          this.processUserQuery(cleanTranscript);
-        } else {
-          this.setState('IDLE');
+        const trimmed = fullTranscript.trim();
+        if (trimmed) {
+          this.hasDetectedSpeechInSession = true;
+          this.accumulatedTranscript = trimmed;
+          this.setSubtitle(`"${trimmed}"`);
+          this.resetSilenceTimer();
         }
       };
 
       this.recognition.onerror = (err: any) => {
         console.warn('[Daykan STT Error]:', err.error);
-        if (!recognized) {
-          if (err.error === 'no-speech') {
-            this.setSubtitle('No speech detected. Click mic to speak again.');
-            this.stopListening();
-            this.setState('IDLE');
-          } else if (err.error === 'not-allowed') {
-            this.errorMessage = 'Microphone permission blocked.';
-            this.stopListening();
-            this.setState('ERROR');
-          } else {
-            this.stopListening();
-            this.setState('IDLE');
-          }
+        if (err.error === 'no-speech') {
+          // Do not kill session on transient silence
+          return;
+        }
+
+        if (err.error === 'not-allowed' || err.error === 'service-not-allowed') {
+          this.errorMessage = 'Microphone permission blocked.';
+          this.setSubtitle('Microphone permission blocked. Please allow mic access.');
+          this.stopListening(false);
+          this.setState('ERROR');
+          return;
+        }
+
+        if (err.error === 'network') {
+          console.warn('[Daykan STT] Network issue with Web Speech API on this origin. Switching to Audio Recorder fallback.');
+          this.startMediaRecorderFallback();
+          return;
+        }
+
+        if (err.error === 'aborted' && !this.isExplicitlyStopping) {
+          return;
         }
       };
 
       this.recognition.onend = () => {
-        if (this.state === 'LISTENING' && !recognized) {
-          this.stopListening();
-          this.setState('IDLE');
+        console.log('[Daykan STT] recognition onend event');
+        if (this.state === 'LISTENING' && !this.isExplicitlyStopping) {
+          // If the user already spoke words, process immediately on pause/end
+          const q = (this.accumulatedTranscript || '').trim();
+          if (q) {
+            console.log('[Daykan STT] Processing speech captured on onend:', q);
+            this.stopListening(true);
+            return;
+          }
+
+          // Otherwise keep listening (restart session) so mic never shuts off prematurely
+          try {
+            this.recognition.start();
+          } catch (e) {
+            console.warn('[Daykan STT] Could not restart recognition:', e);
+          }
         }
       };
 
       this.recognition.start();
       return true;
     } catch (err: any) {
-      console.error('Failed to start listening:', err);
-      this.stopListening();
-      this.errorMessage = 'Could not access microphone.';
+      console.warn('[Daykan STT] SpeechRecognition start failure:', err);
+      return this.startMediaRecorderFallback();
+    }
+  }
+
+  private startMediaRecorderFallback(): boolean {
+    if (!this.micStream) {
+      this.stopListening(false);
+      this.errorMessage = 'Microphone access unavailable.';
+      this.setSubtitle('Microphone access unavailable.');
       this.setState('ERROR');
+      return false;
+    }
+
+    try {
+      if (this.recognition) {
+        try {
+          this.recognition.onresult = null;
+          this.recognition.onerror = null;
+          this.recognition.onend = null;
+          this.recognition.abort();
+        } catch {}
+        this.recognition = null;
+      }
+
+      this.recordedAudioChunks = [];
+      const mimeType =
+        typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+          ? 'audio/webm;codecs=opus'
+          : typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported('audio/webm')
+          ? 'audio/webm'
+          : typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported('audio/mp4')
+          ? 'audio/mp4'
+          : '';
+
+      const recorder = mimeType
+        ? new MediaRecorder(this.micStream, { mimeType })
+        : new MediaRecorder(this.micStream);
+      this.mediaRecorder = recorder;
+
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          this.recordedAudioChunks.push(e.data);
+        }
+      };
+
+      recorder.onstop = async () => {
+        if (this.recordedAudioChunks.length === 0) {
+          if (this.state === 'LISTENING') this.setState('IDLE');
+          return;
+        }
+
+        const audioBlob = new Blob(this.recordedAudioChunks, { type: mimeType || 'audio/webm' });
+        this.recordedAudioChunks = [];
+
+        if (audioBlob.size < 1200) {
+          if (this.state === 'LISTENING') this.setState('IDLE');
+          return;
+        }
+
+        this.setState('THINKING');
+        this.setSubtitle('Transcribing your voice...');
+
+        try {
+          const formData = new FormData();
+          formData.append('audio', audioBlob, 'recording.webm');
+
+          const res = await fetch('/api/daykan/stt', {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success && data.text && data.text.trim()) {
+              this.processUserQuery(data.text.trim());
+              return;
+            }
+          }
+        } catch (sttErr) {
+          console.warn('[Daykan] STT endpoint fallback error:', sttErr);
+        }
+
+        this.setSubtitle('Could not transcribe audio. Please try again or type a message.');
+        this.setState('IDLE');
+      };
+
+      recorder.start(250);
+      return true;
+    } catch (e: any) {
+      console.warn('[Daykan] MediaRecorder fallback start error:', e);
+      this.stopListening(false);
+      this.setState('IDLE');
       return false;
     }
   }
 
-  public stopListening() {
+  public stopListening(processIfCaptured: boolean = false) {
+    this.isExplicitlyStopping = true;
+
+    if (this.silenceTimer) {
+      clearTimeout(this.silenceTimer);
+      this.silenceTimer = null;
+    }
+    if (this.listeningTimeoutTimer) {
+      clearTimeout(this.listeningTimeoutTimer);
+      this.listeningTimeoutTimer = null;
+    }
+
     if (this.recognition) {
       try {
+        this.recognition.onresult = null;
+        this.recognition.onerror = null;
+        this.recognition.onend = null;
         this.recognition.abort();
       } catch {
         // ignore
       }
       this.recognition = null;
     }
-    if (this.state === 'LISTENING') {
-      this.setState('IDLE');
+
+    const hadRecorder = this.mediaRecorder && this.mediaRecorder.state !== 'inactive';
+    if (hadRecorder) {
+      try {
+        this.mediaRecorder?.stop();
+      } catch {
+        // ignore
+      }
+      this.mediaRecorder = null;
     }
-    this.setAmplitude(0);
+
+    if (this.micStream) {
+      this.micStream.getTracks().forEach((track) => track.stop());
+      this.micStream = null;
+    }
+    if (this.micSourceNode) {
+      try {
+        this.micSourceNode.disconnect();
+      } catch {}
+      this.micSourceNode = null;
+    }
+    this.micAnalyser = null;
+    this.micDataArray = null;
+
+    const capturedText = (this.accumulatedTranscript || '').trim();
+    this.accumulatedTranscript = '';
+    this.hasDetectedSpeechInSession = false;
+
+    if (!hadRecorder) {
+      if (processIfCaptured && capturedText) {
+        console.log('[Daykan] User finished speaking, processing captured text:', capturedText);
+        this.processUserQuery(capturedText);
+      } else {
+        if (this.state === 'LISTENING') {
+          this.setState('IDLE');
+        }
+        this.setAmplitude(0);
+      }
+    }
   }
 
   /**
@@ -642,7 +909,7 @@ export class DaykanVoiceManager {
     const currentRequestId = ++this.activeRequestId;
 
     // Gate microphone completely while thinking and speaking
-    this.stopListening();
+    this.stopListening(false);
     this.setState('THINKING');
     this.setSubtitle(isHindi ? 'विचार कर रहा हूँ...' : 'Thinking...');
 
@@ -1100,7 +1367,9 @@ export class DaykanVoiceManager {
     }
 
     try {
-      window.speechSynthesis.cancel();
+      if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
+        window.speechSynthesis.cancel();
+      }
       window.speechSynthesis.resume();
     } catch {
       // ignore
@@ -1245,22 +1514,27 @@ export class DaykanVoiceManager {
       };
 
       utterance.onerror = (e: any) => {
-        if (e.error !== 'canceled' && e.error !== 'interrupted') {
+        if (e.error === 'canceled') {
+          return;
+        }
+        if (e.error !== 'interrupted') {
           console.warn('[Daykan Voice Synthesis Error]:', e);
         }
         safeResolve();
       };
 
-      try {
-        window.speechSynthesis.speak(utterance);
-        window.speechSynthesis.resume();
-      } catch (speakErr) {
-        console.warn('[Daykan] Speech synthesis speak error:', speakErr);
-        startedSpeaking = true;
-        this.isSyntheticSpeaking = true;
-        this.speechStartTime = performance.now();
-        this.startLipSyncPlaybackLoop();
-      }
+      setTimeout(() => {
+        try {
+          window.speechSynthesis.speak(utterance);
+          window.speechSynthesis.resume();
+        } catch (speakErr) {
+          console.warn('[Daykan] Speech synthesis speak error:', speakErr);
+          startedSpeaking = true;
+          this.isSyntheticSpeaking = true;
+          this.speechStartTime = performance.now();
+          this.startLipSyncPlaybackLoop();
+        }
+      }, 40);
     });
   }
 
@@ -1416,10 +1690,29 @@ export class DaykanVoiceManager {
     const checkMic = () => {
       if (this.state !== 'LISTENING') return;
 
-      const time = performance.now() * 0.007;
-      const wave = Math.sin(time) * 0.28 + Math.sin(time * 2.3) * 0.15 + 0.45;
-      const amp = Math.min(1.0, Math.max(0.12, wave + (Math.random() - 0.5) * 0.1));
-      this.setAmplitude(amp);
+      if (this.micAnalyser && this.micDataArray) {
+        (this.micAnalyser as any).getByteFrequencyData(this.micDataArray);
+        let sum = 0;
+        for (let i = 0; i < this.micDataArray.length; i++) {
+          sum += this.micDataArray[i];
+        }
+        const avg = sum / this.micDataArray.length;
+        const norm = Math.min(1.0, (avg / 128.0) * 2.2);
+        this.setAmplitude(norm);
+
+        // Fallback VAD for MediaRecorder mode
+        if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
+          if (norm > 0.08) {
+            this.hasDetectedSpeechInSession = true;
+            this.resetSilenceTimer();
+          }
+        }
+      } else {
+        const time = performance.now() * 0.007;
+        const wave = Math.sin(time) * 0.28 + Math.sin(time * 2.3) * 0.15 + 0.45;
+        const amp = Math.min(1.0, Math.max(0.12, wave + (Math.random() - 0.5) * 0.1));
+        this.setAmplitude(amp);
+      }
 
       this.animFrameId = requestAnimationFrame(checkMic);
     };

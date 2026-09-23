@@ -123,7 +123,10 @@ export default function ProjectsCarouselSection() {
           </h2>
 
           {/* Description */}
-          <p className="text-sm sm:text-base text-[#94A3B8] max-w-xl leading-relaxed">
+          <p
+            className="text-sm sm:text-base text-slate-300 max-w-xl leading-relaxed"
+            style={{ color: '#CBD5E1' }}
+          >
             Engineering digital systems across AI, automation, full-stack development and intelligent interfaces.
           </p>
         </div>
@@ -132,28 +135,32 @@ export default function ProjectsCarouselSection() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-stretch">
           {/* ================= LEFT COLUMN: SCIENTIFIC MONITOR DISPLAY (7 cols) ================= */}
           <div className="lg:col-span-7 flex flex-col justify-between">
-            <div className="w-full h-full rounded-[24px] sm:rounded-[28px] border border-[#1E293B]/80 hover:border-[#38BDF8]/50 transition-all duration-300 bg-[#070D1B]/90 backdrop-blur-2xl p-4 sm:p-6 shadow-[0_0_35px_rgba(0,240,255,0.06)] flex flex-col justify-between gap-4">
+            <div className="relative w-full h-full rounded-[24px] sm:rounded-[28px] border border-[#00F0FF]/25 hover:border-[#00F0FF]/50 transition-all duration-300 bg-gradient-to-b from-[#091428]/95 via-[#060D1E]/95 to-[#040714]/98 backdrop-blur-2xl p-5 sm:p-6 shadow-[0_0_40px_rgba(0,240,255,0.08)] flex flex-col justify-between gap-5">
+              {/* Subtle Top Cyan Glow Beam */}
+              <div className="absolute top-0 left-12 right-12 h-[1px] bg-gradient-to-r from-transparent via-[#00F0FF]/50 to-transparent pointer-events-none" />
+
               {/* Monitor Top Status Telemetry */}
-              <div className="flex items-center justify-between pb-3 border-b border-white/[0.08] text-[10px] sm:text-[11px] font-mono">
+              <div className="flex items-center justify-between pb-3.5 border-b border-white/[0.08] text-[10px] sm:text-[11px] font-mono">
                 <div className="flex items-center gap-2.5">
-                  <span className="relative flex h-2 w-2">
+                  <span className="relative flex h-2.5 w-2.5">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00F0FF] opacity-75" />
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00F0FF] shadow-[0_0_6px_#00F0FF]" />
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#00F0FF] shadow-[0_0_8px_#00F0FF]" />
                   </span>
-                  <span className="text-[#00F0FF] font-bold tracking-wider uppercase">
+                  <span className="text-[#00F0FF] font-bold tracking-wider uppercase font-mono">
                     SYSTEM 0{currentIndex + 1} // ACTIVE MODULE
                   </span>
                 </div>
-                <div className="flex items-center gap-3 text-[#94A3B8]">
-                  <span className="text-[#38BDF8]/80">ID: DR-SYS-00{currentIndex + 1}</span>
-                  <span className="hidden sm:inline-block px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[9px] font-bold">
-                    BUILD: STABLE
+                <div className="flex items-center gap-3">
+                  <span className="text-[#38BDF8]/90 font-mono">ID: DR-SYS-00{currentIndex + 1}</span>
+                  <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] font-mono font-bold tracking-wider">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    ONLINE
                   </span>
                 </div>
               </div>
 
               {/* Monitor Visual Screen (Animated transitions on project change) */}
-              <div className="relative aspect-[16/10] sm:aspect-[16/9] w-full rounded-xl sm:rounded-2xl overflow-hidden border border-white/10 bg-black/60 group">
+              <div className="relative aspect-[16/10] sm:aspect-[16/9] w-full rounded-xl sm:rounded-2xl overflow-hidden border border-white/10 group-hover:border-[#00F0FF]/30 transition-colors bg-black/60 group">
                 <AnimatePresence mode="wait" custom={direction}>
                   <motion.div
                     key={currentProject.id}
@@ -174,32 +181,32 @@ export default function ProjectsCarouselSection() {
                 </AnimatePresence>
 
                 {/* Subtle Laboratory Scanline & Vignette Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-[#070D1B] via-transparent to-transparent opacity-60 pointer-events-none" />
-                <div className="absolute inset-0 bg-[linear-gradient(rgba(0,240,255,0.025)_1px,transparent_1px)] bg-[size:100%_4px] pointer-events-none opacity-40" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#040714] via-transparent to-transparent opacity-65 pointer-events-none" />
+                <div className="absolute inset-0 bg-[linear-gradient(rgba(0,240,255,0.03)_1px,transparent_1px)] bg-[size:100%_4px] pointer-events-none opacity-50" />
 
                 {/* Technical Corner Brackets */}
-                <div className="absolute top-2.5 left-2.5 w-4 h-4 border-t-2 border-l-2 border-[#00F0FF]/70 pointer-events-none" />
-                <div className="absolute top-2.5 right-2.5 w-4 h-4 border-t-2 border-r-2 border-[#00F0FF]/70 pointer-events-none" />
-                <div className="absolute bottom-2.5 left-2.5 w-4 h-4 border-b-2 border-l-2 border-[#00F0FF]/70 pointer-events-none" />
-                <div className="absolute bottom-2.5 right-2.5 w-4 h-4 border-b-2 border-r-2 border-[#00F0FF]/70 pointer-events-none" />
+                <div className="absolute top-3 left-3 w-4 h-4 border-t-2 border-l-2 border-[#00F0FF]/80 pointer-events-none" />
+                <div className="absolute top-3 right-3 w-4 h-4 border-t-2 border-r-2 border-[#00F0FF]/80 pointer-events-none" />
+                <div className="absolute bottom-3 left-3 w-4 h-4 border-b-2 border-l-2 border-[#00F0FF]/80 pointer-events-none" />
+                <div className="absolute bottom-3 right-3 w-4 h-4 border-b-2 border-r-2 border-[#00F0FF]/80 pointer-events-none" />
 
                 {/* Floating System ID Badge */}
-                <div className="absolute bottom-3 left-3 z-10 px-2.5 py-1 rounded bg-[#070D1B]/85 border border-white/15 backdrop-blur-md text-[10px] font-mono text-white/80">
+                <div className="absolute bottom-3.5 left-3.5 z-10 px-3 py-1 rounded-lg bg-[#070D1B]/90 border border-[#00F0FF]/30 backdrop-blur-md text-[10px] font-mono text-white/90 shadow-[0_0_12px_rgba(0,240,255,0.15)]">
                   <span className="text-[#00F0FF] font-bold">ARC-SYS //</span> {currentProject.category}
                 </div>
               </div>
 
               {/* Monitor Bottom Telemetry Specs */}
-              <div className="grid grid-cols-3 gap-2 pt-1 border-t border-white/[0.06]">
+              <div className="grid grid-cols-3 gap-2.5 pt-2 border-t border-white/[0.08]">
                 {currentProject.metrics?.map((m) => (
                   <div
                     key={m.label}
-                    className="flex flex-col px-2.5 py-1.5 rounded-lg bg-[#0B1528]/80 border border-white/[0.06] text-center"
+                    className="flex flex-col items-center justify-center px-3 py-2 rounded-xl bg-[#0A152A]/90 border border-[#00F0FF]/15 hover:border-[#00F0FF]/40 transition-colors text-center shadow-[0_0_12px_rgba(0,240,255,0.03)]"
                   >
-                    <span className="text-[9px] font-mono uppercase tracking-wider text-[#94A3B8]">
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 font-semibold mb-0.5">
                       {m.label}
                     </span>
-                    <span className="text-xs sm:text-sm font-mono font-bold text-[#00F0FF] tracking-wide">
+                    <span className="text-xs sm:text-base font-mono font-black text-[#00F0FF] tracking-wide drop-shadow-[0_0_8px_rgba(0,240,255,0.4)]">
                       {m.value}
                     </span>
                   </div>
@@ -210,7 +217,10 @@ export default function ProjectsCarouselSection() {
 
           {/* ================= RIGHT COLUMN: SYSTEM DETAILS & CONTROL PANEL (5 cols) ================= */}
           <div className="lg:col-span-5 flex flex-col justify-between">
-            <div className="w-full h-full rounded-[24px] sm:rounded-[28px] border border-[#1E293B]/80 bg-[#070D1B]/85 backdrop-blur-2xl p-5 sm:p-6 lg:p-7 shadow-[0_0_30px_rgba(15,23,42,0.6)] flex flex-col justify-between gap-6">
+            <div className="relative w-full h-full rounded-[24px] sm:rounded-[28px] border border-[#00F0FF]/25 hover:border-[#00F0FF]/40 transition-all duration-300 bg-gradient-to-b from-[#091428]/95 via-[#060D1E]/95 to-[#040714]/98 backdrop-blur-2xl p-6 sm:p-7 lg:p-8 shadow-[0_0_40px_rgba(0,240,255,0.08)] flex flex-col justify-between gap-6">
+              {/* Subtle Top Cyan Glow Beam */}
+              <div className="absolute top-0 left-12 right-12 h-[1px] bg-gradient-to-r from-transparent via-[#00F0FF]/50 to-transparent pointer-events-none" />
+
               {/* Top: Metadata & Descriptions */}
               <AnimatePresence mode="wait" custom={direction}>
                 <motion.div
@@ -223,41 +233,49 @@ export default function ProjectsCarouselSection() {
                   className="space-y-4"
                 >
                   {/* Category Pill & Index */}
-                  <div className="flex items-center gap-2.5 flex-wrap">
-                    <span className="text-[10px] sm:text-xs font-mono font-bold tracking-[0.22em] text-[#00F0FF] uppercase px-3 py-1 rounded-full bg-[#0B1528] border border-[#00F0FF]/30 shadow-[0_0_10px_rgba(0,240,255,0.1)]">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <span className="text-[11px] font-mono font-bold tracking-[0.22em] text-[#00F0FF] uppercase px-3.5 py-1 rounded-full bg-[#00F0FF]/10 border border-[#00F0FF]/40 shadow-[0_0_12px_rgba(0,240,255,0.2)]">
                       SYSTEM 0{currentIndex + 1} / 03
                     </span>
-                    <span className="text-[10px] sm:text-xs font-mono tracking-wider text-[#94A3B8] uppercase">
+                    <span className="text-[11px] font-mono font-semibold tracking-widest text-[#38BDF8] uppercase">
                       &bull; &nbsp;{currentProject.category}
                     </span>
                   </div>
 
-                  {/* Project Name */}
-                  <h3 className="text-2xl sm:text-3xl font-display font-extrabold text-white tracking-tight leading-tight">
+                  {/* Project Name (Force 100% white, high-contrast, immune to light mode overrides) */}
+                  <h3
+                    className="text-2xl sm:text-3xl lg:text-[34px] font-display font-black tracking-tight leading-tight text-white keep-white drop-shadow-[0_2px_14px_rgba(0,240,255,0.25)]"
+                    style={{ color: '#FFFFFF' }}
+                  >
                     {currentProject.title}
                   </h3>
 
                   {/* Subtitle */}
-                  <div className="flex items-center gap-1.5 text-xs font-mono text-[#38BDF8]">
-                    <Activity className="w-3.5 h-3.5 text-[#00F0FF]" />
-                    <span>{currentProject.subtitle}</span>
+                  <div className="flex items-center gap-2 text-xs sm:text-sm font-mono text-[#38BDF8]">
+                    <Activity className="w-4 h-4 text-[#00F0FF] animate-pulse" />
+                    <span className="font-semibold tracking-wide text-[#38BDF8]">{currentProject.subtitle}</span>
                   </div>
 
                   {/* Description */}
-                  <p className="text-xs sm:text-sm text-[#94A3B8] leading-relaxed">
+                  <p
+                    className="text-xs sm:text-sm text-slate-300 leading-relaxed font-normal"
+                    style={{ color: '#CBD5E1' }}
+                  >
                     {currentProject.description}
                   </p>
 
                   {/* Engineering Tech Stack Badges */}
-                  <div className="space-y-2 pt-2">
-                    <span className="text-[9px] sm:text-[10px] font-mono uppercase tracking-[0.2em] text-[#7DD3FC]">
+                  <div className="space-y-2.5 pt-2">
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-[0.22em] text-[#7DD3FC] flex items-center gap-1.5">
+                      <Cpu className="w-3 h-3 text-[#00F0FF]" />
                       ENGINEERED WITH
                     </span>
-                    <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                    <div className="flex flex-wrap gap-2">
                       {currentProject.tags.map((tag) => (
                         <span
                           key={tag}
-                          className="px-2.5 py-1 rounded-md text-[10px] sm:text-[11px] font-mono font-semibold uppercase bg-[#0B1528]/95 border border-[#00F0FF]/25 text-[#E0F2FE] hover:border-[#00F0FF] hover:text-[#00F0FF] transition-colors shadow-[0_0_8px_rgba(0,240,255,0.06)]"
+                          className="px-3 py-1 rounded-lg text-[11px] font-mono font-semibold uppercase bg-[#0B172E] border border-[#00F0FF]/25 text-[#E0F2FE] hover:border-[#00F0FF] hover:bg-[#00F0FF]/15 hover:text-white transition-all duration-200 shadow-[0_0_10px_rgba(0,240,255,0.05)] hover:shadow-[0_0_15px_rgba(0,240,255,0.25)] hover:-translate-y-0.5 cursor-default"
+                          style={{ color: '#E0F2FE' }}
                         >
                           {tag}
                         </span>
@@ -268,18 +286,19 @@ export default function ProjectsCarouselSection() {
               </AnimatePresence>
 
               {/* Action Buttons & Navigation Controls */}
-              <div className="space-y-5 pt-4 border-t border-white/[0.08]">
+              <div className="space-y-5 pt-5 border-t border-white/[0.08]">
                 {/* Action Buttons */}
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3.5">
                   {currentProject.liveUrl && (
                     <a
                       href={currentProject.liveUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-[#00F0FF] to-[#38BDF8] text-[#050811] text-xs font-mono font-bold tracking-wider uppercase hover:shadow-[0_0_20px_rgba(0,240,255,0.5)] transition-all duration-300"
+                      className="group inline-flex items-center gap-2.5 px-6 py-3 rounded-full bg-gradient-to-r from-[#00F0FF] via-[#38BDF8] to-[#2563EB] text-[#040814] text-xs font-mono font-extrabold tracking-widest uppercase shadow-[0_0_24px_rgba(0,240,255,0.45)] hover:shadow-[0_0_35px_rgba(0,240,255,0.7)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-300"
+                      style={{ color: '#040814' }}
                     >
                       <span>VIEW SYSTEM</span>
-                      <ExternalLink className="w-3.5 h-3.5" />
+                      <ExternalLink className="w-4 h-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                     </a>
                   )}
                   {currentProject.githubUrl && (
@@ -287,10 +306,11 @@ export default function ProjectsCarouselSection() {
                       href={currentProject.githubUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#0B1528] border border-[#38BDF8]/40 hover:border-[#00F0FF] text-white text-xs font-mono font-bold tracking-wider uppercase hover:shadow-[0_0_15px_rgba(56,189,248,0.25)] transition-all duration-300"
+                      className="group inline-flex items-center gap-2.5 px-6 py-3 rounded-full bg-[#0B172E] hover:bg-[#122240] border border-[#38BDF8]/40 hover:border-[#00F0FF] text-white keep-white text-xs font-mono font-extrabold tracking-widest uppercase shadow-[0_0_15px_rgba(56,189,248,0.15)] hover:shadow-[0_0_25px_rgba(0,240,255,0.3)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-300"
+                      style={{ color: '#FFFFFF' }}
                     >
-                      <Github className="w-3.5 h-3.5 text-[#38BDF8]" />
-                      <span>SOURCE CODE</span>
+                      <Github className="w-4 h-4 text-[#00F0FF] group-hover:rotate-12 transition-transform duration-300" />
+                      <span className="keep-white" style={{ color: '#FFFFFF' }}>SOURCE CODE</span>
                     </a>
                   )}
                 </div>
@@ -300,10 +320,10 @@ export default function ProjectsCarouselSection() {
                   <button
                     type="button"
                     onClick={handlePrev}
-                    className="group flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 rounded-lg bg-[#0B1528]/90 border border-white/10 hover:border-[#00F0FF] text-xs font-mono text-[#94A3B8] hover:text-white transition-all cursor-pointer"
+                    className="group flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl bg-[#0A152A] border border-white/15 hover:border-[#00F0FF] text-xs font-mono font-bold tracking-wider text-slate-300 hover:text-white transition-all shadow-[0_0_12px_rgba(0,0,0,0.3)] hover:shadow-[0_0_15px_rgba(0,240,255,0.25)] cursor-pointer"
                   >
-                    <ChevronLeft className="w-4 h-4 text-[#38BDF8] group-hover:-translate-x-0.5 transition-transform" />
-                    <span className="hidden sm:inline uppercase tracking-wider text-[10px] font-bold">
+                    <ChevronLeft className="w-4 h-4 text-[#00F0FF] group-hover:-translate-x-0.5 transition-transform" />
+                    <span className="hidden sm:inline uppercase tracking-wider text-[10px] font-bold text-slate-300 group-hover:text-white">
                       PREV SYSTEM
                     </span>
                   </button>
@@ -324,13 +344,13 @@ export default function ProjectsCarouselSection() {
                         <div
                           className={`h-1.5 rounded-full transition-all duration-300 ${
                             currentIndex === i
-                              ? 'w-7 sm:w-8 bg-[#00F0FF] shadow-[0_0_10px_#00F0FF]'
-                              : 'w-2 bg-white/20 hover:bg-white/40'
+                              ? 'w-7 sm:w-9 bg-[#00F0FF] shadow-[0_0_12px_#00F0FF]'
+                              : 'w-2 sm:w-2.5 bg-white/20 hover:bg-white/40'
                           }`}
                         />
                       </button>
                     ))}
-                    <span className="text-[10px] sm:text-xs font-mono text-[#38BDF8] font-bold ml-1 tabular-nums">
+                    <span className="text-[11px] sm:text-xs font-mono text-[#00F0FF] font-bold ml-1 tabular-nums">
                       0{currentIndex + 1} / 03
                     </span>
                   </div>
@@ -338,12 +358,12 @@ export default function ProjectsCarouselSection() {
                   <button
                     type="button"
                     onClick={handleNext}
-                    className="group flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 rounded-lg bg-[#0B1528]/90 border border-white/10 hover:border-[#00F0FF] text-xs font-mono text-[#94A3B8] hover:text-white transition-all cursor-pointer"
+                    className="group flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl bg-[#0A152A] border border-white/15 hover:border-[#00F0FF] text-xs font-mono font-bold tracking-wider text-slate-300 hover:text-white transition-all shadow-[0_0_12px_rgba(0,0,0,0.3)] hover:shadow-[0_0_15px_rgba(0,240,255,0.25)] cursor-pointer"
                   >
-                    <span className="hidden sm:inline uppercase tracking-wider text-[10px] font-bold">
+                    <span className="hidden sm:inline uppercase tracking-wider text-[10px] font-bold text-slate-300 group-hover:text-white">
                       NEXT SYSTEM
                     </span>
-                    <ChevronRight className="w-4 h-4 text-[#38BDF8] group-hover:translate-x-0.5 transition-transform" />
+                    <ChevronRight className="w-4 h-4 text-[#00F0FF] group-hover:translate-x-0.5 transition-transform" />
                   </button>
                 </div>
               </div>
@@ -356,7 +376,10 @@ export default function ProjectsCarouselSection() {
           <div className="h-[1px] flex-1 max-w-[80px] sm:max-w-[180px] bg-gradient-to-r from-transparent via-[#38BDF8]/40 to-[#38BDF8]" />
           <div className="flex items-center gap-2 sm:gap-3 text-center">
             <Zap className="w-3.5 h-3.5 text-[#00F0FF] animate-pulse" />
-            <span className="text-[9px] sm:text-xs font-mono font-bold tracking-[0.18em] sm:tracking-[0.24em] text-[#94A3B8] uppercase whitespace-nowrap">
+            <span
+              className="text-[9px] sm:text-xs font-mono font-bold tracking-[0.18em] sm:tracking-[0.24em] text-slate-300 uppercase whitespace-nowrap"
+              style={{ color: '#CBD5E1' }}
+            >
               ENGINEERED &bull; BENCHMARKED &bull; PRODUCTION READY
             </span>
           </div>

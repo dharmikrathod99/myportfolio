@@ -161,11 +161,10 @@ export async function POST(req: NextRequest) {
     if (geminiKey && geminiKey.length > 5) {
       // Prioritize fast, high-quota, production-stable models that never 404
       const candidateModels = [
-        'gemini-flash-lite-latest',
-        'gemini-3.5-flash-lite',
-        'gemini-flash-latest',
-        'gemini-3.5-flash',
         'gemini-3.6-flash',
+        'gemini-flash-latest',
+        'gemini-3.5-flash-lite',
+        'gemini-3.5-flash',
       ];
       const languageDirective = isHindi
         ? "CRITICAL LANGUAGE DIRECTIVE: The user's query is in HINDI. You MUST respond 100% in natural conversational HINDI (हिंदी). NEVER reply in English."

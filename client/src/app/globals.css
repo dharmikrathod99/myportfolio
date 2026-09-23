@@ -75,17 +75,24 @@ html.light [class*="bg-dark-card"] {
 }
 
 /* Text Colors in Luxury Light Theme */
-html:not(.dark) .text-white:not(.keep-white):not(.dark-terminal *):not(#measured-experience *):not(.depth-card *):not(.depth-card):not(#projects-showcase *):not(#projects-showcase):not(#skills *):not(#skills),
-html.light .text-white:not(.keep-white):not(.dark-terminal *):not(#measured-experience *):not(.depth-card *):not(.depth-card):not(#projects-showcase *):not(#projects-showcase):not(#skills *):not(#skills) {
+html:not(.dark) .text-white:not(.keep-white):not(.dark-terminal *):not(#measured-experience *):not(.depth-card *):not(.depth-card):not(#projects-showcase *):not(#projects-showcase):not(#skills *):not(#skills):not(#projects *):not(#projects),
+html.light .text-white:not(.keep-white):not(.dark-terminal *):not(#measured-experience *):not(.depth-card *):not(.depth-card):not(#projects-showcase *):not(#projects-showcase):not(#skills *):not(#skills):not(#projects *):not(#projects) {
   color: #0A0A0A !important;
 }
 
-/* Force pure white text inside dark video showcase and skills in any theme */
+/* Force pure white text inside dark laboratory showcase, projects and skills in any theme */
 #projects-showcase .text-white,
 #projects-showcase h2,
 #projects-showcase h3,
 #projects-showcase p,
 #projects-showcase span,
+#projects .text-white,
+#projects h2,
+#projects h3,
+#projects a.text-white,
+#projects a.keep-white,
+#projects button.keep-white,
+#projects .keep-white,
 #skills .text-white,
 #skills h2,
 #skills .keep-white {

@@ -64,7 +64,7 @@ export function DaykanVoiceWidget({ className = '' }: DaykanVoiceWidgetProps) {
 
   const handleMicClick = () => {
     if (voiceState === 'LISTENING') {
-      manager.stopListening();
+      manager.stopListening(true);
     } else if (voiceState === 'SPEAKING' || voiceState === 'THINKING' || voiceState === 'PREPARING_SPEECH') {
       manager.cancelSpeech();
     } else {
@@ -84,7 +84,7 @@ export function DaykanVoiceWidget({ className = '' }: DaykanVoiceWidgetProps) {
 
   return (
     <div
-      className={`fixed bottom-5 sm:bottom-7 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center gap-2 w-auto max-w-[95vw] pointer-events-auto select-none ${className}`}
+      className={`absolute bottom-5 sm:bottom-7 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center gap-2 w-auto max-w-[95vw] pointer-events-auto select-none ${className}`}
     >
       {/* 1. Live Spoken Caption Compact Coding Terminal Window */}
       <AnimatePresence>
